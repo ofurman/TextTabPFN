@@ -23,6 +23,8 @@ ARCHITECTURE_TAGS = {
     "tabular-row-pooling", "modality-projector", "gated-mlp", "cross-attention-pooler",
     "graph-attention", "target-tokens", "class-token-logit-filter", "retrieval-head", "pca", "tree-predictor",
     "benchmark-generator",
+    "feature-code-generator", "tabular-structural-attention-bias",
+    "graph-convolution", "adaptive-layer-norm",
 }
 SECTIONS = (
     "Text-source scope", "Problem and positioning", "Architecture", "Input",

@@ -43,5 +43,7 @@ Inspiration for context that supplies assumptions rather than another feature co
 
 ## Related works
 
+- [Use What You Know: Causal Foundation Models with Partial Graphs](2026-use-what-you-know.md)
+- [Large Language Models for Automated Data Science: Introducing CAAFE for Context-Aware Automated Feature Engineering](2023-caafe.md)
 - [TabLLM: Few-shot Classification of Tabular Data with Large Language Models](2023-tabllm.md)
 - [TabPFN: A Transformer That Solves Small Tabular Classification Problems in a Second](2023-tabpfn.md)

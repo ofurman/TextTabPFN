@@ -161,6 +161,33 @@ class WikiLintTests(unittest.TestCase):
         self.write_catalogue()
         self.assertEqual(lint(self.root), [])
 
+    def test_feature_code_generation_with_tabular_predictor_is_valid(self):
+        self.metadata["architecture_tags"] = ["feature-code-generator", "tabular-transformer", "tree-predictor"]
+        self.write_note(body=self.body.replace(
+            "Text encoder supplies representations to a separate tabular transformer.",
+            "A fixed language model generates feature code for a tabular transformer or tree predictor.",
+        ))
+        self.write_catalogue()
+        self.assertEqual(lint(self.root), [])
+
+    def test_graph_conditioning_blocks_are_valid(self):
+        self.metadata["architecture_tags"] = [
+            "tabular-transformer", "tabular-structural-attention-bias",
+            "graph-convolution", "adaptive-layer-norm",
+        ]
+        self.write_note(body=self.body.replace(
+            "Text encoder supplies representations to a separate tabular transformer.",
+            "No text transformer; structural biases and graph convolution with AdaLN condition the tabular backbone.",
+        ))
+        self.write_catalogue()
+        self.assertEqual(lint(self.root), [])
+
+    def test_structural_attention_bias_requires_tabular_transformer(self):
+        self.metadata["architecture_tags"] = ["tabular-structural-attention-bias"]
+        self.write_note()
+        self.write_catalogue()
+        self.assert_failure("require tabular-transformer")
+
     def test_catalogue_brief_mismatch(self):
         changed = copy.deepcopy(self.metadata)
         changed["brief"] = "A stale description."

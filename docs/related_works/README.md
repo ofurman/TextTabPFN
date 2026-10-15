@@ -34,6 +34,8 @@ Other tags identify modality projectors, gated MLPs, cross-attention poolers, gr
 
 Each note's **Block roles** paragraph identifies the text, tabular, and interface components and explains variant scope. Architecture tags describe the main studied pipeline; comparison baselines are not included, and undisclosed text internals are not guessed.
 
+`feature-code-generator` identifies code-based feature engineering rather than latent fusion. `tabular-structural-attention-bias`, `graph-convolution`, and `adaptive-layer-norm` identify structured-knowledge conditioning; they do not imply a language-model block.
+
 ## Catalogue
 
 | Paper | Year / venue | Text-source tags | Architecture blocks | Brief |
@@ -53,9 +55,12 @@ Each note's **Block roles** paragraph identifies the text, tabular, and interfac
 | [TabICL: A Tabular Foundation Model for In-Context Learning on Large Data](2025-tabicl.md) | ICML 2025 | `no-text` | `tabular-transformer`, `tabular-inducing-attention`, `tabular-feature-attention`, `tabular-row-pooling`, `tabular-row-attention` | Alternative tabular foundation model; compare text benefits across architectures. |
 | [TabICLv2: A Better, Faster, Scalable, and Open Tabular Foundation Model](2026-tabicl-v2.md) | ICML 2026 | `no-text` | `tabular-transformer`, `tabular-inducing-attention`, `tabular-feature-attention`, `tabular-row-pooling`, `tabular-row-attention` | Updated open TabICL classification/regression baseline. |
 | [CausalDS: Benchmarking Causal Reasoning in Data-Science Agents](2026-causalds.md) | 2026 | `task-domain-context` | `benchmark-generator` | User-requested paper: tables plus natural-language causal stories. Adjacent evaluation work, rather than a TabPFN extension. |
+| [Large Language Models for Automated Data Science: Introducing CAAFE for Context-Aware Automated Feature Engineering](2023-caafe.md) | 2023 | `column-label-semantics`, `task-domain-context` | `feature-code-generator`, `tabular-transformer`, `tabular-row-attention`, `tree-predictor` | Dataset descriptions drive LLM-generated feature code selected with TabPFN validation; task-context baseline. |
+| [Use What You Know: Causal Foundation Models with Partial Graphs](2026-use-what-you-know.md) | ICML 2026 | `no-text` | `tabular-transformer`, `tabular-feature-attention`, `tabular-row-attention`, `tabular-structural-attention-bias`, `graph-convolution`, `adaptive-layer-norm` | Partial ancestral graphs condition a causal PFN through feature-attention biases and GCN/AdaLN; structural-prior precedent. |
 
 ## Suggested reading order
 
+- **Task-level and structural conditioning:** [CAAFE](2023-caafe.md), [Use What You Know](2026-use-what-you-know.md).
 - **Closest text–TabPFN approaches:** [Towards Pretraining Text Encoders for TabPFN](2026-text-encoders-for-tabpfn.md), [MultiModalPFN: Extending Prior-Data Fitted Networks for Multimodal Tabular Learning](2026-multimodalpfn.md).
 - **Semantic and text-tabular competitors:** [TabPFN-3: Technical Report](2026-tabpfn-3.md), [TabSTAR: A Tabular Foundation Model for Tabular Data with Text Fields](2025-tabstar.md), [ConTextTab: A Semantics-Aware Tabular In-Context Learner](2025-contexttab.md).
 - **Embedding and few-label baselines:** [TabPFN beyond Tabular Data: Calibration and Accuracy on Multimodal Embeddings](2026-tabpfn-beyond-tabular-data.md), [TabText: Language-Based Representations of Tabular Health Data for Predictive Modelling](2022-tabtext.md), [TabLLM: Few-shot Classification of Tabular Data with Large Language Models](2023-tabllm.md).

@@ -43,6 +43,8 @@ The closest precedent for lightweight text support. Reported regression results 
 
 ## Related works
 
+- [Large Language Models for Automated Data Science: Introducing CAAFE for Context-Aware Automated Feature Engineering](2023-caafe.md)
+- [Use What You Know: Causal Foundation Models with Partial Graphs](2026-use-what-you-know.md)
 - [MultiModalPFN: Extending Prior-Data Fitted Networks for Multimodal Tabular Learning](2026-multimodalpfn.md)
 - [TabPFN beyond Tabular Data: Calibration and Accuracy on Multimodal Embeddings](2026-tabpfn-beyond-tabular-data.md)
 - [ConTextTab: A Semantics-Aware Tabular In-Context Learner](2025-contexttab.md)

@@ -193,5 +193,31 @@
     "pages": 12,
     "bytes": 1495335,
     "sha256": "fcee0794711bd9bbc7ddd2462994ad5cb9f5543efcf1a98fccc115ebdacde9b6"
+  },
+  {
+    "file": "raw/2023_caafe.pdf",
+    "note": "2023-caafe.md",
+    "title": "Large Language Models for Automated Data Science: Introducing CAAFE for Context-Aware Automated Feature Engineering",
+    "year_or_venue": "2023",
+    "source_url": "https://arxiv.org/abs/2305.03403",
+    "pdf_url": "https://arxiv.org/pdf/2305.03403v5",
+    "arxiv_version": "v5",
+    "retrieved_on": "2026-10-15",
+    "pages": 23,
+    "bytes": 542620,
+    "sha256": "0a2a846030b9edf23efcf4b3069d47c6b983c630e0e204b22bed3dff2cae5c8f"
+  },
+  {
+    "file": "raw/2026_use_what_you_know.pdf",
+    "note": "2026-use-what-you-know.md",
+    "title": "Use What You Know: Causal Foundation Models with Partial Graphs",
+    "year_or_venue": "ICML 2026",
+    "source_url": "https://arxiv.org/abs/2602.14972",
+    "pdf_url": "https://arxiv.org/pdf/2602.14972v3",
+    "arxiv_version": "v3",
+    "retrieved_on": "2026-10-15",
+    "pages": 35,
+    "bytes": 5648759,
+    "sha256": "ae1b7562d34a66cc9dda624830794d2c481698e26ad6c539b47b85b2ed313b45"
   }
 ]

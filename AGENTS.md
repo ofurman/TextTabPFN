@@ -87,6 +87,10 @@ Tags MUST be nonempty, unique, and drawn only from this vocabulary. Classify act
 - `graph-attention`: graph-attention/message-passing blocks contextualizing structured row graphlets.
 - `target-tokens`: explicit candidate-target/name tokens interacting with features; observed training-label embeddings alone do not qualify.
 - `class-token-logit-filter`: selects mapped class-token logits from a language model's vocabulary output and normalizes them for classification; this is not an added classification head or a tabular target-token interaction block.
+- `feature-code-generator`: a language-model pipeline generates executable feature-transformation code as its interface to a downstream predictor; this is not a learned latent projector.
+- `tabular-structural-attention-bias`: structural knowledge modifies feature-attention logits in a tabular transformer, using soft learned biases or explicit masks.
+- `graph-convolution`: a graph-convolutional network propagates structure into node representations; distinguish it from graph attention.
+- `adaptive-layer-norm`: conditioning signals modulate hidden representations through learned layer-normalization scale and shift.
 - `retrieval-head`: an attention-based prediction head retrieving/aggregating labeled context examples.
 - `pca`: PCA preprocessing at the embedding/model interface; this is a pipeline component, not a transformer block.
 - `tree-predictor`: a downstream tree-based predictor consuming representations, not a synthetic pretraining prior.

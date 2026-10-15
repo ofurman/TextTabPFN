@@ -43,6 +43,7 @@ A strong task-aware competitor. It transfers through pretrained weights and down
 
 ## Related works
 
+- [SALSA: Single-pass Autoregressive LLM Structured Classification](2025-salsa.md)
 - [ConTextTab: A Semantics-Aware Tabular In-Context Learner](2025-contexttab.md)
 - [TabLLM: Few-shot Classification of Tabular Data with Large Language Models](2023-tabllm.md)
 - [TabPFN-3: Technical Report](2026-tabpfn-3.md)

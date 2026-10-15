@@ -17,11 +17,11 @@ from urllib.parse import unquote, urlsplit
 
 TAGS = {"row-level-text", "column-label-semantics", "task-domain-context", "no-text"}
 ARCHITECTURE_TAGS = {
-    "tabular-transformer", "text-transformer-encoder", "text-transformer-encoder-decoder",
+    "tabular-transformer", "text-transformer-encoder", "text-transformer-decoder", "text-transformer-encoder-decoder",
     "static-text-embeddings", "vision-encoder", "audio-encoder",
     "tabular-row-attention", "tabular-feature-attention", "tabular-inducing-attention",
     "tabular-row-pooling", "modality-projector", "gated-mlp", "cross-attention-pooler",
-    "graph-attention", "target-tokens", "retrieval-head", "pca", "tree-predictor",
+    "graph-attention", "target-tokens", "class-token-logit-filter", "retrieval-head", "pca", "tree-predictor",
     "benchmark-generator",
 }
 SECTIONS = (

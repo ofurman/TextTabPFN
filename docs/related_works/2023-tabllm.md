@@ -43,6 +43,7 @@ Tests a different route: let the language model predict directly. Useful for che
 
 ## Related works
 
+- [SALSA: Single-pass Autoregressive LLM Structured Classification](2025-salsa.md)
 - [TabText: Language-Based Representations of Tabular Health Data for Predictive Modelling](2022-tabtext.md)
 - [TabSTAR: A Tabular Foundation Model for Tabular Data with Text Fields](2025-tabstar.md)
 - [CausalDS: Benchmarking Causal Reasoning in Data-Science Agents](2026-causalds.md)

@@ -151,6 +151,16 @@ class WikiLintTests(unittest.TestCase):
         self.write_catalogue()
         self.assertEqual(lint(self.root), [])
 
+    def test_decoder_only_class_token_classifier_is_valid(self):
+        self.metadata["architecture_tags"] = ["text-transformer-decoder", "class-token-logit-filter"]
+        body = self.body.replace(
+            "Text encoder supplies representations to a separate tabular transformer.",
+            "Text decoder scores mapped vocabulary tokens; no tabular transformer is used.",
+        )
+        self.write_note(body=body)
+        self.write_catalogue()
+        self.assertEqual(lint(self.root), [])
+
     def test_catalogue_brief_mismatch(self):
         changed = copy.deepcopy(self.metadata)
         changed["brief"] = "A stale description."

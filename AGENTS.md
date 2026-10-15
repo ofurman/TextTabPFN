@@ -72,6 +72,7 @@ Tags MUST be nonempty, unique, and drawn only from this vocabulary. Classify act
 
 - `tabular-transformer`: a transformer backbone operating on structured table features or row representations, including table-native ICL. Serializing a table into an LLM does not qualify.
 - `text-transformer-encoder`: an encoder-style language transformer processing text tokens into representations, such as MiniLM, e5, ELECTRA, or Clinical-Longformer.
+- `text-transformer-decoder`: an autoregressive decoder-only language transformer, such as Llama, used to process text and score or generate answers.
 - `text-transformer-encoder-decoder`: an encoder-decoder language transformer such as T0, used for text-based prediction.
 - `static-text-embeddings`: non-transformer semantic embeddings, such as FastText; do not label these as a text transformer.
 - `vision-encoder`: a component encoding images; explain its specific architecture in the note.
@@ -85,6 +86,7 @@ Tags MUST be nonempty, unique, and drawn only from this vocabulary. Classify act
 - `cross-attention-pooler`: learned queries pool modality tokens by cross-attention; distinct from tabular row pooling.
 - `graph-attention`: graph-attention/message-passing blocks contextualizing structured row graphlets.
 - `target-tokens`: explicit candidate-target/name tokens interacting with features; observed training-label embeddings alone do not qualify.
+- `class-token-logit-filter`: selects mapped class-token logits from a language model's vocabulary output and normalizes them for classification; this is not an added classification head or a tabular target-token interaction block.
 - `retrieval-head`: an attention-based prediction head retrieving/aggregating labeled context examples.
 - `pca`: PCA preprocessing at the embedding/model interface; this is a pipeline component, not a transformer block.
 - `tree-predictor`: a downstream tree-based predictor consuming representations, not a synthetic pretraining prior.

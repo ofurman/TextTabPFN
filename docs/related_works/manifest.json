@@ -180,5 +180,18 @@
     "bytes": 1059607,
     "sha256": "83b730efff2ed3a1268d3cc04f995bba688ba9c46ad5b5b7e55e4ed287ec3063",
     "note": "2026-causalds.md"
+  },
+  {
+    "file": "raw/2025_salsa.pdf",
+    "note": "2025-salsa.md",
+    "title": "SALSA: Single-pass Autoregressive LLM Structured Classification",
+    "year_or_venue": "2025 preprint",
+    "source_url": "https://arxiv.org/abs/2510.22691",
+    "pdf_url": "https://arxiv.org/pdf/2510.22691v1",
+    "arxiv_version": "v1",
+    "retrieved_on": "2026-10-15",
+    "pages": 12,
+    "bytes": 1495335,
+    "sha256": "fcee0794711bd9bbc7ddd2462994ad5cb9f5543efcf1a98fccc115ebdacde9b6"
   }
 ]

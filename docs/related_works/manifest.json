@@ -1,6 +1,6 @@
 [
   {
-    "file": "2026_text_encoders_for_tabpfn.pdf",
+    "file": "raw/2026_text_encoders_for_tabpfn.pdf",
     "title": "Towards Pretraining Text Encoders for TabPFN",
     "year_or_venue": "2026",
     "source_url": "https://arxiv.org/abs/2606.04876",
@@ -9,10 +9,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 7,
     "bytes": 1804999,
-    "sha256": "12c64c4e3249df2b780b14d44e4acbe1585630910accfd16176597885d8117ea"
+    "sha256": "12c64c4e3249df2b780b14d44e4acbe1585630910accfd16176597885d8117ea",
+    "note": "2026-text-encoders-for-tabpfn.md"
   },
   {
-    "file": "2026_multimodalpfn.pdf",
+    "file": "raw/2026_multimodalpfn.pdf",
     "title": "MultiModalPFN: Extending Prior-Data Fitted Networks for Multimodal Tabular Learning",
     "year_or_venue": "2026",
     "source_url": "https://arxiv.org/abs/2602.20223",
@@ -21,10 +22,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 16,
     "bytes": 13183930,
-    "sha256": "c2af7465565cbff755d3a5b65f9c6506f343f43d96043c92a84028ab188137eb"
+    "sha256": "c2af7465565cbff755d3a5b65f9c6506f343f43d96043c92a84028ab188137eb",
+    "note": "2026-multimodalpfn.md"
   },
   {
-    "file": "2026_tabpfn_beyond_tabular_data.pdf",
+    "file": "raw/2026_tabpfn_beyond_tabular_data.pdf",
     "title": "TabPFN beyond Tabular Data: Calibration and Accuracy on Multimodal Embeddings",
     "year_or_venue": "2026",
     "source_url": "https://arxiv.org/abs/2607.11007",
@@ -33,10 +35,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 19,
     "bytes": 7722812,
-    "sha256": "4fe9d5a4760d9ebd4937df8ab08b4d793b141d61d3f2c690e328918b36c28117"
+    "sha256": "4fe9d5a4760d9ebd4937df8ab08b4d793b141d61d3f2c690e328918b36c28117",
+    "note": "2026-tabpfn-beyond-tabular-data.md"
   },
   {
-    "file": "2026_tabpfn_3.pdf",
+    "file": "raw/2026_tabpfn_3.pdf",
     "title": "TabPFN-3: Technical Report",
     "year_or_venue": "2026",
     "source_url": "https://arxiv.org/abs/2605.13986",
@@ -45,10 +48,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 83,
     "bytes": 6826374,
-    "sha256": "68825024d264813f2f094769cbfac5ad9e887883472a50f0c73e1558c6ac4bc7"
+    "sha256": "68825024d264813f2f094769cbfac5ad9e887883472a50f0c73e1558c6ac4bc7",
+    "note": "2026-tabpfn-3.md"
   },
   {
-    "file": "2025_tabstar.pdf",
+    "file": "raw/2025_tabstar.pdf",
     "title": "TabSTAR: A Tabular Foundation Model for Tabular Data with Text Fields",
     "year_or_venue": "2025",
     "source_url": "https://arxiv.org/abs/2505.18125",
@@ -57,10 +61,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 47,
     "bytes": 894974,
-    "sha256": "3c557dfbe5fdf11eeb9ab207f20d77fd18e547d07d8b5362d54e95c1764ecd39"
+    "sha256": "3c557dfbe5fdf11eeb9ab207f20d77fd18e547d07d8b5362d54e95c1764ecd39",
+    "note": "2025-tabstar.md"
   },
   {
-    "file": "2025_contexttab.pdf",
+    "file": "raw/2025_contexttab.pdf",
     "title": "ConTextTab: A Semantics-Aware Tabular In-Context Learner",
     "year_or_venue": "2025",
     "source_url": "https://arxiv.org/abs/2506.10707",
@@ -69,10 +74,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 29,
     "bytes": 1195247,
-    "sha256": "dfb384009e5d170b7f21c3f15e73dacf7b819c46ab937d05162591b9e5b07497"
+    "sha256": "dfb384009e5d170b7f21c3f15e73dacf7b819c46ab937d05162591b9e5b07497",
+    "note": "2025-contexttab.md"
   },
   {
-    "file": "2024_carte.pdf",
+    "file": "raw/2024_carte.pdf",
     "title": "CARTE: Pretraining and Transfer for Tabular Learning",
     "year_or_venue": "2024",
     "source_url": "https://arxiv.org/abs/2402.16785",
@@ -81,10 +87,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 24,
     "bytes": 1325558,
-    "sha256": "5bb47a74cf2eb4e5b53359a4dfa4b892509461193b2e0217dc85db5f1383676d"
+    "sha256": "5bb47a74cf2eb4e5b53359a4dfa4b892509461193b2e0217dc85db5f1383676d",
+    "note": "2024-carte.md"
   },
   {
-    "file": "2022_tabtext.pdf",
+    "file": "raw/2022_tabtext.pdf",
     "title": "TabText: Language-Based Representations of Tabular Health Data for Predictive Modelling",
     "year_or_venue": "2022 preprint; revised 2025",
     "source_url": "https://arxiv.org/abs/2206.10381",
@@ -93,10 +100,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 16,
     "bytes": 1435185,
-    "sha256": "5793cd122d5cf4606ea0dc5322c16c3226bd77f9f63f3c32aceb43e78cf288f8"
+    "sha256": "5793cd122d5cf4606ea0dc5322c16c3226bd77f9f63f3c32aceb43e78cf288f8",
+    "note": "2022-tabtext.md"
   },
   {
-    "file": "2023_tabllm.pdf",
+    "file": "raw/2023_tabllm.pdf",
     "title": "TabLLM: Few-shot Classification of Tabular Data with Large Language Models",
     "year_or_venue": "2023; preprint 2022",
     "source_url": "https://arxiv.org/abs/2210.10723",
@@ -105,10 +113,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 33,
     "bytes": 836247,
-    "sha256": "70be0af2653bd5b8da071fec1794d8084bddded93380d1b71e7a772eb35dd0b9"
+    "sha256": "70be0af2653bd5b8da071fec1794d8084bddded93380d1b71e7a772eb35dd0b9",
+    "note": "2023-tabllm.md"
   },
   {
-    "file": "2023_tabpfn.pdf",
+    "file": "raw/2023_tabpfn.pdf",
     "title": "TabPFN: A Transformer That Solves Small Tabular Classification Problems in a Second",
     "year_or_venue": "ICLR 2023; preprint 2022",
     "source_url": "https://arxiv.org/abs/2207.01848",
@@ -117,10 +126,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 37,
     "bytes": 3793138,
-    "sha256": "97796b6e6b134b200555a7ebbacea2f6daecb9ab309279ba50d915d5ac5c9df6"
+    "sha256": "97796b6e6b134b200555a7ebbacea2f6daecb9ab309279ba50d915d5ac5c9df6",
+    "note": "2023-tabpfn.md"
   },
   {
-    "file": "2025_tabpfn_v2.pdf",
+    "file": "raw/2025_tabpfn_v2.pdf",
     "title": "Accurate predictions on small data with a tabular foundation model",
     "year_or_venue": "Nature 2025",
     "source_url": "https://www.nature.com/articles/s41586-024-08328-6",
@@ -129,10 +139,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 23,
     "bytes": 16957699,
-    "sha256": "6b5ce3dba2ef7454ad0868ad733a64b4ac89bcd98307773fad1e0e977caaa013"
+    "sha256": "6b5ce3dba2ef7454ad0868ad733a64b4ac89bcd98307773fad1e0e977caaa013",
+    "note": "2025-tabpfn-v2.md"
   },
   {
-    "file": "2025_tabicl.pdf",
+    "file": "raw/2025_tabicl.pdf",
     "title": "TabICL: A Tabular Foundation Model for In-Context Learning on Large Data",
     "year_or_venue": "ICML 2025",
     "source_url": "https://arxiv.org/abs/2502.05564",
@@ -141,10 +152,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 31,
     "bytes": 4066189,
-    "sha256": "22b3b112d8e2875edc4e1054073f354dc139594f1d2bfe38754592d49d96bc3e"
+    "sha256": "22b3b112d8e2875edc4e1054073f354dc139594f1d2bfe38754592d49d96bc3e",
+    "note": "2025-tabicl.md"
   },
   {
-    "file": "2026_tabicl_v2.pdf",
+    "file": "raw/2026_tabicl_v2.pdf",
     "title": "TabICLv2: A Better, Faster, Scalable, and Open Tabular Foundation Model",
     "year_or_venue": "ICML 2026",
     "source_url": "https://arxiv.org/abs/2602.11139",
@@ -153,10 +165,11 @@
     "retrieved_on": "2026-10-15",
     "pages": 79,
     "bytes": 15274950,
-    "sha256": "71554be35ba3847a14267912d9738f6049545cf74a30d860de1ed23d14d95246"
+    "sha256": "71554be35ba3847a14267912d9738f6049545cf74a30d860de1ed23d14d95246",
+    "note": "2026-tabicl-v2.md"
   },
   {
-    "file": "2026_causalds.pdf",
+    "file": "raw/2026_causalds.pdf",
     "title": "CausalDS: Benchmarking Causal Reasoning in Data-Science Agents",
     "year_or_venue": "2026",
     "source_url": "https://arxiv.org/abs/2607.08093",
@@ -165,6 +178,7 @@
     "retrieved_on": "2026-10-15",
     "pages": 74,
     "bytes": 1059607,
-    "sha256": "83b730efff2ed3a1268d3cc04f995bba688ba9c46ad5b5b7e55e4ed287ec3063"
+    "sha256": "83b730efff2ed3a1268d3cc04f995bba688ba9c46ad5b5b7e55e4ed287ec3063",
+    "note": "2026-causalds.md"
   }
 ]

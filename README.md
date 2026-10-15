@@ -15,9 +15,9 @@ The idea is to combine structured features with useful text—such as row descri
 
 ## Related work
 
-See the [related-work collection and briefing](docs/related_works/README.md) for papers, primary sources, text-source tags, and each work's problem and positioning, architecture, input, output, and relevance to this project.
+See the [related-work wiki](docs/related_works/README.md) for a catalogue with text-source and architecture block tags, short briefs, and one detailed note per paper. Notes distinguish text-transformer and tabular-transformer components and cover problem and positioning, architecture, input, output, and relevance to this project, with links to PDFs in `docs/related_works/raw/`.
 
-All related-work additions and revisions must follow the [mandatory maintenance rules in AGENTS.md](AGENTS.md#related-works-maintenance-mandatory). The collection README is the single maintained index and briefing; update it and any affected PDF metadata in the same change.
+All related-work additions and revisions must follow the [mandatory maintenance rules in AGENTS.md](AGENTS.md#related-works-maintenance-mandatory). Keep the catalogue, notes, and PDF manifest synchronized and run `./scripts/lint_related_works.sh` before completing a change.
 
 Existing work already combines text representations with TabPFN and other tabular foundation models. Our initial focus is to test when text helps in smaller labeled-data regimes, rather than assume the broad combination is novel.
 

@@ -10,7 +10,7 @@ last_updated: 2026-10-15
 
 # Research: Text augmentation for tabular foundation models
 
-This document is a dated research snapshot. The [related-work collection and briefing](../../related_works/README.md) is the maintained source for individual work records. All collection changes must follow the [mandatory rules in AGENTS.md](../../../AGENTS.md#related-works-maintenance-mandatory); this snapshot does not define separate maintenance rules.
+This document is a dated research snapshot. The [related-work wiki catalogue](../../related_works/README.md) links to the maintained individual paper notes and PDFs in `raw/`. All collection changes must follow the [mandatory rules in AGENTS.md](../../../AGENTS.md#related-works-maintenance-mandatory); this snapshot does not define separate maintenance rules.
 
 ## Research Question
 
@@ -42,7 +42,7 @@ The [original TabPFN](https://arxiv.org/abs/2207.01848) establishes the small-da
 
 ## Sources Consulted
 
-The [collection and briefing](../../related_works/README.md) contains the primary sources, local PDFs, and structured work records. At the time of this snapshot, it covered 14 works. The [manifest](../../related_works/manifest.json) records the downloaded files and checksums.
+The [wiki catalogue](../../related_works/README.md) links to individual paper notes containing primary sources and local PDFs. At the time of this snapshot, it covered 14 works. The [manifest](../../related_works/manifest.json) records note/PDF paths and download checksums.
 
 ## Key Insights
 

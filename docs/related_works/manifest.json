@@ -219,5 +219,83 @@
     "pages": 35,
     "bytes": 5648759,
     "sha256": "ae1b7562d34a66cc9dda624830794d2c481698e26ad6c539b47b85b2ed313b45"
+  },
+  {
+    "file": "raw/2023_tablet.pdf",
+    "note": "2023-tablet.md",
+    "title": "TABLET: Learning From Instructions For Tabular Data",
+    "year_or_venue": "2023 preprint",
+    "source_url": "https://arxiv.org/abs/2304.13188",
+    "pdf_url": "https://arxiv.org/pdf/2304.13188v1",
+    "arxiv_version": "v1",
+    "retrieved_on": "2026-10-15",
+    "pages": 19,
+    "bytes": 714760,
+    "sha256": "4e19b7880d7d326cbdb82e7444fdf70bfd850da99d7cc4432ccc067ad5de9e13"
+  },
+  {
+    "file": "raw/2026_tablens.pdf",
+    "note": "2026-tablens.md",
+    "title": "Do You Even Need More Data? Rethinking LLM Deployment for Label-Scarce Tabular Classification with TabLens",
+    "year_or_venue": "2026 preprint; v3",
+    "source_url": "https://arxiv.org/abs/2605.24417",
+    "pdf_url": "https://arxiv.org/pdf/2605.24417v3",
+    "arxiv_version": "v3",
+    "retrieved_on": "2026-10-15",
+    "pages": 33,
+    "bytes": 5051094,
+    "sha256": "ace29bae1dad531db4449c7227a929c7129720b541c56c63a97388e62b510500"
+  },
+  {
+    "file": "raw/2024_autoelicit.pdf",
+    "note": "2024-autoelicit.md",
+    "title": "AutoElicit: Using Large Language Models for Expert Prior Elicitation in Predictive Modelling",
+    "year_or_venue": "ICML 2025; preprint 2024",
+    "source_url": "https://arxiv.org/abs/2411.17284v5",
+    "pdf_url": "https://arxiv.org/pdf/2411.17284v5",
+    "arxiv_version": "v5",
+    "retrieved_on": "2026-10-15",
+    "pages": 32,
+    "bytes": 2092481,
+    "sha256": "5a1ad2307b087db4b64ce983bfaf9ac7ec4fd7bc1d183a990682c6b908b122ce"
+  },
+  {
+    "file": "raw/2025_llm_informative_priors.pdf",
+    "note": "2025-llm-informative-priors.md",
+    "title": "Using large language models to suggest informative prior distributions in Bayesian regression analysis",
+    "year_or_venue": "Scientific Reports 2025",
+    "source_url": "https://www.nature.com/articles/s41598-025-18425-9",
+    "pdf_url": "https://www.nature.com/articles/s41598-025-18425-9.pdf",
+    "arxiv_version": null,
+    "retrieved_on": "2026-10-15",
+    "pages": 17,
+    "bytes": 6264621,
+    "sha256": "4de16c76923e8d1ba06a7721c6ecd8e7991355a7d013f3e475d2f25aa3cc5659"
+  },
+  {
+    "file": "raw/2023_cladder.pdf",
+    "note": "2023-cladder.md",
+    "title": "CLadder: Assessing Causal Reasoning in Language Models",
+    "year_or_venue": "NeurIPS 2023",
+    "source_url": "https://arxiv.org/abs/2312.04350",
+    "pdf_url": "https://arxiv.org/pdf/2312.04350v3",
+    "arxiv_version": "v3",
+    "retrieved_on": "2026-10-15",
+    "pages": 28,
+    "bytes": 1205850,
+    "sha256": "6020ba90c4f16fb632cae4f698e565b25f713a58f13ebbdbd330ca5943b2fc24"
+  },
+  {
+    "file": "raw/2024_ace.pdf",
+    "note": "2024-ace.md",
+    "title": "Amortized Probabilistic Conditioning for Optimization, Simulation and Inference",
+    "year_or_venue": "AISTATS 2025; preprint 2024",
+    "source_url": "https://arxiv.org/abs/2410.15320",
+    "pdf_url": "https://arxiv.org/pdf/2410.15320v2",
+    "arxiv_version": "v2",
+    "retrieved_on": "2026-10-15",
+    "pages": 39,
+    "bytes": 7276707,
+    "sha256": "fbb1f69003e77798f2ef05a637726dd2e859b43ae4c530fe86b59c442be64a13"
   }
 ]

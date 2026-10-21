@@ -58,7 +58,17 @@ Each note's **Block roles** paragraph identifies the text, tabular, and interfac
 | [Large Language Models for Automated Data Science: Introducing CAAFE for Context-Aware Automated Feature Engineering](2023-caafe.md) | 2023 | `column-label-semantics`, `task-domain-context` | `feature-code-generator`, `tabular-transformer`, `tabular-row-attention`, `tree-predictor` | Dataset descriptions drive LLM-generated feature code selected with TabPFN validation; task-context baseline. |
 | [Use What You Know: Causal Foundation Models with Partial Graphs](2026-use-what-you-know.md) | ICML 2026 | `no-text` | `tabular-transformer`, `tabular-feature-attention`, `tabular-row-attention`, `tabular-structural-attention-bias`, `graph-convolution`, `adaptive-layer-norm` | Partial ancestral graphs condition a causal PFN through feature-attention biases and GCN/AdaLN; structural-prior precedent. |
 
+| [TABLET: Learning From Instructions For Tabular Data](2023-tablet.md) | 2023 preprint | `column-label-semantics`, `task-domain-context` | `benchmark-generator` | Instruction benchmark with shared task knowledge, few-shot comparisons, and flipped-rule faithfulness tests. |
+| [Do You Even Need More Data? Rethinking LLM Deployment for Label-Scarce Tabular Classification with TabLens](2026-tablens.md) | 2026 preprint; v3 | `row-level-text`, `column-label-semantics`, `task-domain-context` | `benchmark-generator` | Factorial context and shot-count benchmark; distinguishes schema cues, task descriptions, and explicit synthetic decision rules. |
+| [AutoElicit: Using Large Language Models for Expert Prior Elicitation in Predictive Modelling](2024-autoelicit.md) | ICML 2025; preprint 2024 | `column-label-semantics`, `task-domain-context` | `text-transformer-decoder` | Task descriptions elicit parameter priors for Bayesian linear models; a direct sample-efficiency baseline outside tabular foundation models. |
+| [Using large language models to suggest informative prior distributions in Bayesian regression analysis](2025-llm-informative-priors.md) | Scientific Reports 2025 | `column-label-semantics`, `task-domain-context` | `text-transformer-decoder` | Evaluates LLM-suggested regression priors, finding overconfidence and no statistically significant predictive improvement on two real datasets. |
+| [CLadder: Assessing Causal Reasoning in Language Models](2023-cladder.md) | NeurIPS 2023 | `column-label-semantics`, `task-domain-context` | `benchmark-generator` | Formal causal questions verbalized as stories; commonsense and nonsense variants motivate controls for semantic priors. |
+| [Amortized Probabilistic Conditioning for Optimization, Simulation and Inference](2024-ace.md) | AISTATS 2025; preprint 2024 | `no-text` | `tabular-transformer`, `tabular-row-attention` | Amortized Conditioning Engine accepts explicit latent-variable priors at runtime, motivating a structured conditioning baseline. |
+
 ## Suggested reading order
+
+- **Shared context and label efficiency:** [TABLET](2023-tablet.md), [TabLens](2026-tablens.md), [AutoElicit](2024-autoelicit.md).
+- **Prior reliability and evaluation controls:** [LLM-suggested informative priors](2025-llm-informative-priors.md), [CLadder](2023-cladder.md), [ACE](2024-ace.md).
 
 - **Task-level and structural conditioning:** [CAAFE](2023-caafe.md), [Use What You Know](2026-use-what-you-know.md).
 - **Closest text–TabPFN approaches:** [Towards Pretraining Text Encoders for TabPFN](2026-text-encoders-for-tabpfn.md), [MultiModalPFN: Extending Prior-Data Fitted Networks for Multimodal Tabular Learning](2026-multimodalpfn.md).
@@ -69,8 +79,9 @@ Each note's **Block roles** paragraph identifies the text, tabular, and interfac
 
 ## Problem and project positioning
 
-Combining text with TabPFN already has direct precedents. Our proposed focus is: **Can text-conditioned representations improve tabular in-context prediction under a small label budget, while preserving performance when text is unhelpful?** This is a research question, not an established novelty claim.
+Our question is whether a tabular foundation model can use one natural-language description of a data-generating setting to improve observational prediction, and how the effect changes with labeled support size. Both arms receive the same public schema, target definition, support rows and query features; only the shared story differs. Hidden SCM equations, parameters and query labels remain private. See the [canonical research problem](../../AGENTS.md#research-problem).
 
+Shared instructions and context–label tradeoffs already have direct precedents in [TABLET](2023-tablet.md) and [TabLens](2026-tablens.md). [AutoElicit](2024-autoelicit.md) also studies language-elicited priors and label efficiency. These works make a broad claim that “task descriptions help with few labels” insufficient differentiation. Our proposed focus is controlled, fresh, noisy SCM scenes with identical schema information across arms, task-disjoint generalization, proper predictive losses, and correct/irrelevant/incorrect-story tests. Whether a pretrained tabular model benefits remains an experimental question, and this scoped search does not establish novelty.
 Distinguish three sources of text:
 
 - **Row-level text:** reviews, notes, or descriptions that supply additional observations.
@@ -83,18 +94,21 @@ Also distinguish fixed-weight in-context learning, which conditions on labeled r
 
 The following are proposed experiments, not established gaps or findings:
 
-| Question | Closest references |
+| Question | Closest references and implications |
 |---|---|
-| Does a learned token adapter beat embedding concatenation/PCA? | Text Adapter; TabPFN beyond Tabular Data |
-| Does task-aware text encoding help with very few labels? | TabSTAR; TabICLv2's target-aware compression |
-| Can text help without fine-tuning the tabular backbone? | Text Adapter versus MultiModalPFN |
-| Do gains come from extra observations or semantic metadata? | ConTextTab; TabText; CARTE |
-| Can the model ignore irrelevant or misleading text? | Robustness question to test explicitly |
+| Does the shared story help beyond schema semantics? | TABLET's matched instruction removal; TabLens's factorial schema/task ablations. Preserve the public schema and target definition in both arms. |
+| How many labels does context save? | AutoElicit and TabLens. Use paired support-size curves and a prespecified predictive-loss threshold, including a larger-data regime. |
+| Does a latent interface beat explicit knowledge transfer? | Compare a text-conditioned tabular model with CAAFE and elicited-prior Bayesian logistic regression under the same information budget. |
+| Does the model follow communicated structure or familiar associations? | CLadder's semantic controls and CausalDS's ground-truth generation. Separate truthful counterintuitive mechanisms from incorrect stories. |
+| Can conditioning hurt? | LLM-suggested priors and TabLens motivate reporting calibration, degradation tails, and missing/irrelevant/misleading context. |
+| Can the tabular model exploit valid structural information? | ACE and Use What You Know motivate a separately labeled privileged structured-conditioning diagnostic. |
 
-A controlled small-label study should separate these effects with shared splits and model-selection budgets. Any new architecture should address a demonstrated failure mode. The collection alone does not establish a novel gap.
+Never expose true labeling rules or coefficients in the ordinary-story arm merely because some prior benchmarks do so. Generated instructions distilled from a full labeled dataset carry a different information budget. Report ordinary ROC-AUC and proper predictive losses without correcting prediction orientation using query labels. Select scenes independently of whether context helps; compare paired methods and aggregate uncertainty across scenes.
 
 ## Provenance
 
 PDFs were downloaded from arXiv or the publisher. [manifest.json](manifest.json) records note/PDF paths, primary sources, download URLs, identified arXiv versions, retrieval dates, page counts, sizes, and SHA-256 hashes. Years in filenames denote the initial preprint or publication year; PDFs can contain later revisions. Papers remain subject to their original licenses.
 
 See the dated [research synthesis](../research/web/2026-10-15-text-tabular-foundation-models.md) for the original collection findings and open questions. Individual paper notes are the maintained records.
+
+See the [additional shared-context research synthesis](../research/web/2026-10-15-shared-context-related-works.md) for this expansion, its evidence limits, and remaining research questions.

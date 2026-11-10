@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -19,10 +20,12 @@ from texttabpfn.capacity import ARMS, CONFIG_JSON, RESULTS_DIR, SUPPORT_SIZES, S
 
 BOOTSTRAP_RESAMPLES = 1000
 BOOTSTRAP_SEED = 0
+# Per-row loss columns: the three table columns first, then the validation losses.
+_LOGLOSS_FIELDS = ("native_logloss", "optimized_logloss", "gain", "val_native", "val_best")
 
 
 class IncompleteResults(Exception):
-    """A required (arm, n) row or scene is missing from the results."""
+    """A required (arm, n) row or scene is missing, mismatched or non-finite."""
 
 
 def scene_bootstrap_ci(
@@ -47,16 +50,27 @@ def capacity_table(results_dir: Path, arm: str) -> list[dict[str, float]]:
         raise IncompleteResults(
             f"results cover {expected} scenes; the stage requires {Settings().num_scenes}"
         )
+    scenes = [tuple(spec) for spec in config["scenes"]]
     gains: dict[int, dict[int, tuple[float, float, float]]] = {n: {} for n in SUPPORT_SIZES}
     with csv_path.open() as fh:
-        for row in csv.DictReader(fh):
+        for line, row in enumerate(csv.DictReader(fh), start=2):
             if row["arm"] != arm or int(row["n"]) not in gains:
                 continue
-            gains[int(row["n"])][int(row["scene"])] = (
-                float(row["native_logloss"]),
-                float(row["optimized_logloss"]),
-                float(row["gain"]),
-            )
+            scene = int(row["scene"])
+            spec = (int(row["family"]), int(row["seed"]))
+            if scene >= len(scenes) or spec != scenes[scene]:
+                expected_spec = scenes[scene] if scene < len(scenes) else None
+                raise IncompleteResults(
+                    f"{csv_path}:{line}: scene {scene} is (family, seed) {spec}; "
+                    f"config.json has {expected_spec}"
+                )
+            values = tuple(float(row[k]) for k in _LOGLOSS_FIELDS)
+            if not all(math.isfinite(v) for v in values):
+                raise IncompleteResults(
+                    f"{csv_path}:{line}: non-finite value in "
+                    f"{dict(zip(_LOGLOSS_FIELDS, values, strict=True))}"
+                )
+            gains[int(row["n"])][scene] = values[:3]
     table = []
     for n in SUPPORT_SIZES:
         missing = sorted(set(range(expected)) - set(gains[n]))

@@ -53,6 +53,13 @@ EVAL_SEED_RANGE = (2_000_000, 2_100_000)
 # Rows drawn once per scene to fix node standardisation and the threshold.
 _CALIBRATION_ROWS = 4096
 
+# Interaction terms are products of tanh of the parents: bounded, so they keep a
+# finite variance under heavy-tailed noise (a product or square of Student-t(3)
+# parents has infinite variance, which made std calibration outlier-driven).
+# The gain is 1 / E[tanh(x)^2] for x ~ N(0, 1), so a product of two independent
+# standard-normal parents has unit variance, like one unit-weight linear term.
+_INTERACTION_GAIN = 2.54
+
 Role = Literal["mb", "irrelevant", "measure"]
 
 
@@ -212,8 +219,9 @@ class Scene:
             out = np.tanh(xs * node.slopes + node.offsets) @ node.weights
         else:  # interaction
             out = xs @ node.weights
+            t = np.tanh(xs)
             for (i, j), w in zip(node.pairs, node.pair_weights, strict=True):
-                out = out + w * xs[:, i] * xs[:, j]
+                out = out + w * _INTERACTION_GAIN * t[:, i] * t[:, j]
         return out
 
     def _forward(

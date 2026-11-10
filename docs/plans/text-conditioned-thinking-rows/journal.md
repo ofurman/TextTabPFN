@@ -6,3 +6,17 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 - Reviews `flagged`, tripwire 3 h, harness omp. Implementer `omp/task` high, reviewer `omp/reviewer` high, helper `omp/sonic` medium.
 - Owner's reply: {"model": "default", "reviews": "flagged"}. Defaults taken: omp task/reviewer/sonic agents on omp default model, tripwire 3 h, branch thinking-rows from 0412dca.
 - DoD checks 1–7 unreachable only because code is unbuilt (planner dry-runs); a correct build can pass each. Base commit 0412dca.
+
+## 2026-11-10T22:05Z 01 Channel capacity: build accepted
+- Infra: implementer died on API outage after the full 50-scene run; orchestrator wrote reports/01-implement.md from committed results (no rerun needed).
+- `uv run python -m texttabpfn.report capacity` -> exit 0; shared gain 0.162/0.124/0.075 at n=8/16/32, CIs exclude 0, stop rule not fired.
+- `uv run python -m texttabpfn.report capacity --arm per-column` -> exit 0; 0.200/0.154/0.100. Commit bdeb972.
+- Review: P1 (family 5 near-unlearnable, heavy-tail squares) fix; P3 (report accepts NaN/mismatch) fix. One fix round dispatched; families 0-3 must stay bit-identical.
+
+## 2026-11-10T22:20Z 01 Channel capacity: DONE
+- Fix1 (c9f99c5): interaction terms now w·2.54·tanh(xi)·tanh(xj); families 0-3 bit-identical to bdeb972 (200/200 scene hashes equal); family 5 native n=1024 logloss 0.533 -> 0.371 (family 1: 0.328).
+- Re-run: both `report capacity` commands -> exit 0, numbers unchanged. Report now rejects NaN and (family, seed) mismatches.
+
+## 2026-11-10T22:20Z 01 re-plan
+- Keep 02-06 as carded; stop rule did not fire. Cut nothing.
+- Add B-11: interaction measurement nodes with one parent can get a sign-dropping tanh(h)^2 term (12/73 low-MI measure columns in family 4).

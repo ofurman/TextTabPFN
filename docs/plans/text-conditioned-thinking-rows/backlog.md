@@ -10,3 +10,4 @@
 - B-08: Add related-work notes and PDFs for TabPFN-2.5 and TuneTables under the AGENTS.md maintenance rules (from: planning)
 - B-09: Ablate the encoder with bge-base-en-v1.5 (768-d, 512 tokens) (from: planning)
 - B-10: Ablate a shared or low-rank W against the per-row Wᵢ (about 4.7M parameters) to check for overfitting (from: planning)
+- B-11: Interaction-family measurement nodes with one parent can get a sign-dropping tanh(h)^2 term, leaving some measure columns with low MI with y (family 4: 12/73); revisit if reliability results look odd (from: stage 01)

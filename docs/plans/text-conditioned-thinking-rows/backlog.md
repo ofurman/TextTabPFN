@@ -1,0 +1,12 @@
+# Backlog
+
+- B-01: Train a per-column conditioning arm (θ_tg, design B of the 2026-11-04 note) if the stage 1 per-column capacity clearly exceeds the shared-row capacity (from: planning)
+- B-02: Run the adapter inside each ensemble member of the sklearn wrapper, recomputing groups after each feature shuffle, and compare with the ensembled native model (from: planning)
+- B-03: Measure H2 as the number of labels each arm needs to reach a fixed query log loss (from: planning)
+- B-04: Evaluate on LLM-paraphrased and CausalDS-style held-out stories to test transfer from templates (from: planning)
+- B-05: Evaluate the trained adapters on the public CausalDS scenes with binary targets (from: planning)
+- B-06: Condition the thinking rows in every layer (B-deep) or add LoRA if the input-only channel saturates (from: planning)
+- B-07: Build the two-stage graph interface (design S) as an alternative to raw-text conditioning (from: planning)
+- B-08: Add related-work notes and PDFs for TabPFN-2.5 and TuneTables under the AGENTS.md maintenance rules (from: planning)
+- B-09: Ablate the encoder with bge-base-en-v1.5 (768-d, 512 tokens) (from: planning)
+- B-10: Ablate a shared or low-rank W against the per-row Wᵢ (about 4.7M parameters) to check for overfitting (from: planning)

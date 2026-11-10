@@ -1,0 +1,77 @@
+{
+  "plan": "text-conditioned-thinking-rows",
+  "iteration": 1,
+  "stages": [
+    {
+      "id": 1,
+      "title": "Channel capacity of the thinking rows",
+      "status": "PENDING",
+      "box": 6,
+      "review": true,
+      "depends": [],
+      "commit": null,
+      "note": ""
+    },
+    {
+      "id": 2,
+      "title": "Stories and parity-checked adapter",
+      "status": "PENDING",
+      "box": 4,
+      "review": false,
+      "depends": [
+        1
+      ],
+      "commit": null,
+      "note": ""
+    },
+    {
+      "id": 3,
+      "title": "Episodic training of story and schema-only arms",
+      "status": "PENDING",
+      "box": 6,
+      "review": false,
+      "depends": [
+        2
+      ],
+      "commit": null,
+      "note": ""
+    },
+    {
+      "id": 4,
+      "title": "Primary evaluation over support sizes",
+      "status": "PENDING",
+      "box": 3,
+      "review": true,
+      "depends": [
+        3
+      ],
+      "commit": null,
+      "note": ""
+    },
+    {
+      "id": 5,
+      "title": "Context reliability evaluation",
+      "status": "PENDING",
+      "box": 2,
+      "review": false,
+      "depends": [
+        3
+      ],
+      "commit": null,
+      "note": ""
+    },
+    {
+      "id": 6,
+      "title": "Results note and verdict",
+      "status": "PENDING",
+      "box": 1,
+      "review": false,
+      "depends": [
+        4,
+        5
+      ],
+      "commit": null,
+      "note": ""
+    }
+  ]
+}

@@ -5,12 +5,16 @@
     {
       "id": 1,
       "title": "Channel capacity of the thinking rows",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "box": 6,
       "review": true,
       "depends": [],
       "commit": null,
-      "note": ""
+      "note": "",
+      "implementer": "omp/task, high",
+      "reviewer": null,
+      "fixRounds": 0,
+      "startedAt": "2026-11-10T17:20Z"
     },
     {
       "id": 2,
@@ -22,7 +26,11 @@
         1
       ],
       "commit": null,
-      "note": ""
+      "note": "",
+      "implementer": null,
+      "reviewer": null,
+      "fixRounds": 0,
+      "startedAt": null
     },
     {
       "id": 3,
@@ -34,7 +42,11 @@
         2
       ],
       "commit": null,
-      "note": ""
+      "note": "",
+      "implementer": null,
+      "reviewer": null,
+      "fixRounds": 0,
+      "startedAt": null
     },
     {
       "id": 4,
@@ -46,7 +58,11 @@
         3
       ],
       "commit": null,
-      "note": ""
+      "note": "",
+      "implementer": null,
+      "reviewer": null,
+      "fixRounds": 0,
+      "startedAt": null
     },
     {
       "id": 5,
@@ -58,7 +74,11 @@
         3
       ],
       "commit": null,
-      "note": ""
+      "note": "",
+      "implementer": null,
+      "reviewer": null,
+      "fixRounds": 0,
+      "startedAt": null
     },
     {
       "id": 6,
@@ -71,7 +91,36 @@
         5
       ],
       "commit": null,
-      "note": ""
+      "note": "",
+      "implementer": null,
+      "reviewer": null,
+      "fixRounds": 0,
+      "startedAt": null
     }
-  ]
+  ],
+  "settings": {
+    "preset": "lean",
+    "reviews": "flagged",
+    "tripwireHours": 3,
+    "harness": "omp",
+    "startedAt": "2026-11-10T17:18Z"
+  },
+  "roles": {
+    "orchestrator": "omp/claude-opus-5-5",
+    "implementer": {
+      "agent": "omp/task",
+      "effort": "high",
+      "command": null
+    },
+    "reviewer": {
+      "agent": "omp/reviewer",
+      "effort": "high",
+      "command": null
+    },
+    "helper": {
+      "agent": "omp/sonic",
+      "effort": "medium",
+      "command": null
+    }
+  }
 }

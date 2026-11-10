@@ -22,14 +22,16 @@
     {
       "id": 2,
       "title": "Stories and parity-checked adapter",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "box": 4,
       "review": false,
       "depends": [
         1
       ],
-      "commit": null,
-      "note": "",
+      "commit": [
+        "8cbb249"
+      ],
+      "note": "parity exact (0 diff, CPU+MPS), label isolation holds, max text 159/256 tokens; W 4,718,592 params",
       "implementer": "omp/task, high",
       "reviewer": null,
       "fixRounds": 0,
@@ -38,7 +40,7 @@
     {
       "id": 3,
       "title": "Episodic training of story and schema-only arms",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "box": 6,
       "review": false,
       "depends": [
@@ -46,10 +48,10 @@
       ],
       "commit": null,
       "note": "",
-      "implementer": null,
+      "implementer": "omp/task, high",
       "reviewer": null,
       "fixRounds": 0,
-      "startedAt": null
+      "startedAt": "2026-11-10T23:30Z"
     },
     {
       "id": 4,

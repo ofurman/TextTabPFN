@@ -20,3 +20,11 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 ## 2026-11-10T22:20Z 01 re-plan
 - Keep 02-06 as carded; stop rule did not fire. Cut nothing.
 - Add B-11: interaction measurement nodes with one parent can get a sign-dropping tanh(h)^2 term (12/73 low-MI measure columns in family 4).
+
+## 2026-11-10T23:25Z 02 Stories and adapter: DONE
+- `uv run pytest tests_exp/test_parity.py` -> 15 passed; `uv run pytest tests_exp/test_label_isolation.py` -> 6 passed (re-run once).
+- `uv run python -m texttabpfn.report stories` -> exit 0, max schema+story 159 tokens over 1250 scenes. Commit 8cbb249.
+- Adapter: W 64x192x384 = 4,718,592 params, no bias; e(t) is L2-normalized MiniLM mean pool.
+
+## 2026-11-10T23:25Z 02 re-plan
+- Keep 03 as carded; brief fills stage-2 API (adapter.conditioned, episode_logits, stories.scene_text variants). Cut nothing. Add nothing.

@@ -76,3 +76,11 @@ A plain mean is not used because the story gives no signs and measurement weight
 - **"not supported" or "harmful"** → B-01. Even exact per-feature roles fail through rows that are identical across columns, so the next test is per-column rows that bind each column's role tokens directly.
 
 The orchestrator records the choice in `journal.md`. The branch not taken stays in the backlog.
+
+## D-15: 10k-step role-token retrain decides D-14
+2026-11-11, owner: retrain both role-token arms for 10,000 steps (stage 13). Planning fixed the rest at 19:20Z, before any stage 9 held-out result existed.
+- D-14 is applied to the 10k-step `role10k-primary` verdict instead of the 4000-step `role-primary` verdict.
+- Both are reported.
+- Stage 10 waits for stage 13.
+
+Reason: the 4000-step story arm was still improving at its last checkpoint, so the better-trained pair is the fairer test of whether the shared channel uses roles. Not taken: continuing the 4000-step run with a new schedule, which would not give a clean budget-matched pair.

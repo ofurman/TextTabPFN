@@ -102,3 +102,8 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 
 ## 2026-11-11T19:12Z 08 re-plan
 - Keep 09 as carded. Cut nothing. Add nothing.
+
+## 2026-11-11T19:20Z 13 added (owner request)
+- Owner: "Try also to train for 10k steps". Stage 13 added; D-15 fixes D-14 input to the 10k-step verdict, decided before any stage 9 held-out result.
+- Launched `uv run python -m texttabpfn.role_training --steps 10000 --val-every 500 --out results/13-role-training-10k` detached at 19:17Z; shares MPS with stage 9 inference.
+- Stage 10 now depends on 9 and 13. ETA for stage 13 training ~03:00Z.

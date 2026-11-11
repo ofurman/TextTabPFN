@@ -163,7 +163,8 @@
       "box": 6,
       "review": false,
       "depends": [
-        9
+        9,
+        13
       ],
       "commit": null,
       "note": ""
@@ -192,6 +193,20 @@
       ],
       "commit": null,
       "note": ""
+    },
+    {
+      "id": 13,
+      "title": "Ten-thousand-step role-token training and evaluation",
+      "status": "IN_PROGRESS",
+      "box": 9,
+      "review": false,
+      "depends": [
+        8
+      ],
+      "commit": null,
+      "note": "",
+      "startedAt": "2026-11-11T19:17Z",
+      "implementer": "orchestrator (launch), omp/task, high (eval)"
     }
   ],
   "settings": {

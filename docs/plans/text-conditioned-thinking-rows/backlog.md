@@ -15,3 +15,4 @@
 - B-13: Make `report primary`/`curve` cross-check `results/04-primary/config.json` checkpoints and arm texts against stage 3 `summary.json` (from: stage 04 review)
 - B-14: Extract per-feature role facts from free-form or LLM-paraphrased stories with a local LLM, feeding the role-token interface (D-11) (from: planning)
 - B-15: Corruption runs for the follow-on arm of stage 10 (from: planning)
+- B-16: Role corruption runs for the 10k-step role-token arms (stage 13) (from: planning)

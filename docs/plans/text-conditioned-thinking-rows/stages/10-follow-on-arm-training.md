@@ -1,7 +1,7 @@
 # Stage 10: Follow-on arm training
 
 Goal: train the follow-on arm that D-14 selects, B-09 or B-01, and its matched control, with the same episodes and budget.
-Box: 6h · Review: no · Depends: 9
+Box: 6h · Review: no · Depends: 9, 13
 
 ## Done when
 

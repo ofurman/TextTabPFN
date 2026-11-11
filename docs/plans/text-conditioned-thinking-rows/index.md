@@ -57,9 +57,10 @@ Iteration 1's DoD (items 1–7 of 2026-11-10) passed. The evidence is in [report
 | 7 | [Value of story roles to native TabPFN](stages/07-value-of-story-roles-to-native-tabpfn.md) | 2 | yes | - |
 | 8 | [Role-token adapter and matched control training](stages/08-role-token-adapter-and-matched-control.md) | 6 | no | 7 |
 | 9 | [Role-token held-out evaluation](stages/09-role-token-held-out-evaluation.md) | 2 | yes | 8 |
-| 10 | [Follow-on arm training](stages/10-follow-on-arm-training.md) | 6 | no | 9 |
+| 10 | [Follow-on arm training](stages/10-follow-on-arm-training.md) | 6 | no | 9,13 |
 | 11 | [Follow-on held-out evaluation](stages/11-follow-on-held-out-evaluation.md) | 2 | yes | 10 |
 | 12 | [Iteration-2 results note](stages/12-iteration-2-results-note.md) | 1 | no | 9,11 |
+| 13 | [Ten-thousand-step role-token training and evaluation](stages/13-ten-thousand-step-role-token-training.md) (owner, D-15) | 9 | no | 8 |
 
 All stages use the one local MPS device. They run one after another.
 

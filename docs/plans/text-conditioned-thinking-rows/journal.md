@@ -89,3 +89,9 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 
 ## 2026-11-11T11:58Z 07 re-plan
 - Keep 08 (running), 09-12 as carded. Stage 9 adds a support-only-fit preprocessing variant as a secondary arm. Cut nothing.
+
+## 2026-11-11T16:05Z 08 infra failure and relaunch
+- Implementer died on DNS failure (getaddrinfo ENOTFOUND) after 1h; code built, full run never launched, no report.
+- Kept: `uv run pytest -q tests_exp` -> 145 passed; all iteration-1 reports + roleinfo exit 0. Code committed eaee451.
+- Pilots (/tmp/rt_pilots, 200 steps, 16 dev scenes): lr 3e-4/1e-3/3e-3 all within ±0.009 of native; 3e-3 unstable for control. Full run uses lr 1e-3 (iteration-1 setting).
+- Orchestrator launched `nohup uv run python -m texttabpfn.role_training` directly (detached) so an API drop cannot stop it.

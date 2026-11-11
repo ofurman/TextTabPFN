@@ -113,12 +113,14 @@
     {
       "id": 7,
       "title": "Value of story roles to native TabPFN",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "box": 2,
       "review": true,
       "depends": [],
       "commit": null,
-      "note": ""
+      "note": "",
+      "startedAt": "2026-11-11T04:20Z",
+      "implementer": "omp/task, high"
     },
     {
       "id": 8,

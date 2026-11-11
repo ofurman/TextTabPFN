@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-from texttabpfn import evaluation, reliability, role_training, roleinfo, training
+from texttabpfn import evaluation, reliability, role_eval, role_training, roleinfo, training
 from texttabpfn.capacity import ARMS, CONFIG_JSON, RESULTS_DIR, SUPPORT_SIZES, Settings, arm_csv
 from texttabpfn.scenes import HELDOUT_FAMILIES, eval_scene_specs
 
@@ -566,6 +566,174 @@ def print_roleinfo(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- Stage 9: role-token adapters on held-out families ------------------------
+
+# Largest |reference arm rescored in stage 9 - its stage 4 / 7 score| on identical rows.
+_REFERENCE_RESCORE_TOL = 1e-6
+
+
+def _role_eval_scores(
+    results_dir: Path,
+) -> tuple[list[tuple[int, int]], dict[tuple[int, int, int, str], float]]:
+    """Scenes and scores; raises unless the design matches and every required row is finite."""
+    config_path = results_dir / role_eval.CONFIG_JSON
+    if not config_path.exists():
+        raise IncompleteResults(f"missing {config_path}")
+    config = json.loads(config_path.read_text())
+    core = role_eval._config_core()
+    other = sorted(k for k in core if config.get(k) != core[k])
+    if other:
+        raise IncompleteResults(f"{config_path} differs from the stage 9 design in {other}")
+    scenes = [tuple(s) for s in config["scenes"]]
+    if not (results_dir / role_eval.SCORES_CSV).exists():
+        raise IncompleteResults(f"missing {results_dir / role_eval.SCORES_CSV}")
+    scores = role_eval.read_scores(results_dir)
+    need = sorted(role_eval.required_rows())
+    missing = [
+        (f, s, n, label)
+        for f, s in scenes
+        for n, label in need
+        if not math.isfinite(scores.get((f, s, n, label), math.nan))
+    ]
+    if missing:
+        raise IncompleteResults(
+            f"{len(missing)} of {len(scenes) * len(need)} (scene, n, arm) rows missing or non-finite "
+            f"(first: {missing[:3]})"
+        )
+    return scenes, scores
+
+
+def _role_references(
+    args: argparse.Namespace, scenes: list[tuple[int, int]]
+) -> tuple[dict[tuple[int, int, int, str], float], float]:
+    """Stage 4 arms and stage 7 preprocessing (as ``preproc``) on the stage 9 scenes,
+    and the largest |rescored - read| over the stage 9 rescore sample."""
+    sizes = evaluation.Settings().sizes
+    primary_scenes, primary = _evaluation_scores(args.primary, sizes)
+    roleinfo_scenes, info = _roleinfo_scores(args.roleinfo)
+    if primary_scenes != scenes or roleinfo_scenes != scenes:
+        raise IncompleteResults(f"{args.primary} or {args.roleinfo} scores other scenes than {args.results}")
+    refs = {k: v for k, v in primary.items() if k[3] in evaluation.ARMS}
+    refs |= {(f, s, n, role_eval.PREPROC): v for (f, s, n, arm), v in info.items() if arm == roleinfo.ROLES}
+    rescore_path = args.results / role_eval.RESCORE_CSV
+    if not rescore_path.exists():
+        raise IncompleteResults(f"missing {rescore_path}")
+    rescored = role_eval.read_scores(args.results, role_eval.RESCORE_CSV)
+    keys = [
+        (f, s, n, arm)
+        for f, s in scenes[: role_eval.RESCORE_SCENES]
+        for n in sizes
+        for arm in role_eval.REFERENCE_ARMS
+    ]
+    missing = [k for k in keys if not math.isfinite(rescored.get(k, math.nan))]
+    if missing:
+        raise IncompleteResults(f"{len(missing)} of {len(keys)} rescore rows missing (first: {missing[:3]})")
+    return refs, max(abs(rescored[k] - refs[k]) for k in keys)
+
+
+def print_role_primary(args: argparse.Namespace) -> int:
+    """Role-token story minus matched control at n = 8, 16, 32 and the D-08 verdict."""
+    scenes, scores = _role_eval_scores(args.results)
+    story, control = role_eval.STORY, role_eval.CONTROL
+
+    def diff(sub: list[tuple[int, int]], n: int) -> np.ndarray:
+        return _per_scene(scores, sub, n, story) - _per_scene(scores, sub, n, control)
+
+    print(
+        f"Stage 9 role-primary (D-08): role-token adapters (stage 8), {len(scenes)} held-out scenes "
+        f"(families 4-5), stage 4 rows ({evaluation.Settings().support_seeds} nested support seeds, "
+        f"{evaluation.Settings().query_rows} query rows); paired per-scene difference role-token story - "
+        f"role-token control query log loss, 95% scene-bootstrap CI ({BOOTSTRAP_RESAMPLES} resamples)"
+    )
+    print(f"{'n':>5} {'control':>8} {'story':>8}  {'story - control [95% CI]':>28}")
+    cis = {}
+    for n in PRIMARY_SIZES:
+        d = diff(scenes, n)
+        cis[n] = scene_bootstrap_ci(d)
+        means = [_per_scene(scores, scenes, n, arm).mean() for arm in (control, story)]
+        print(f"{n:>5} " + " ".join(f"{m:>8.4f}" for m in means) + f"  {_diff_cell(d):>28}")
+    print(f"D-08 verdict: {d08_verdict(cis)}")
+    print("\nSecondary: role-token story - control by held-out family [95% CI]")
+    families = {fam: [sc for sc in scenes if sc[0] == fam] for fam in HELDOUT_FAMILIES}
+    print(f"{'n':>5} " + " ".join(f"{f'family {fam} ({len(sub)} scenes)':>28}" for fam, sub in families.items()))
+    for n in PRIMARY_SIZES:
+        print(f"{n:>5} " + " ".join(f"{_diff_cell(diff(sub, n)):>28}" for sub in families.values()))
+    return 0
+
+
+def print_role_curve(args: argparse.Namespace) -> int:
+    """Role-token arms against each other and the references at every support size."""
+    scenes, scores = _role_eval_scores(args.results)
+    refs, drift = _role_references(args, scenes)
+    sizes = evaluation.Settings().sizes
+    both = scores | refs
+    story, control, pre_s = role_eval.STORY, role_eval.CONTROL, role_eval.PREPROC_SUPPORT
+    native, preproc, it1 = evaluation.NATIVE, role_eval.PREPROC, "story"
+
+    def d(n: int, a: str, b: str) -> str:
+        return f"{_diff_cell(_per_scene(both, scenes, n, a) - _per_scene(both, scenes, n, b)):>28}"
+
+    print(
+        f"Stage 9 role-curve: {len(scenes)} held-out scenes, stage 4 rows; mean query log loss per arm and "
+        f"paired per-scene differences, 95% scene-bootstrap CI ({BOOTSTRAP_RESAMPLES} resamples)"
+    )
+    print(
+        "Arms: native; preproc = story-guided preprocessing, support+query fit (stage 7); preproc-s = "
+        "support-only fit; it1 = iteration-1 story adapter (stage 4); role story / role control (stage 8)"
+    )
+    cols = ((native, "native"), (preproc, "preproc"), (pre_s, "preproc-s"), (it1, "it1"), (story, "story"), (control, "control"))
+    print(f"{'n':>5} " + " ".join(f"{label:>9}" for _, label in cols) + f"  {'story - control [95% CI]':>28}")
+    for n in sizes:
+        means = [_per_scene(both, scenes, n, arm).mean() for arm, _ in cols]
+        print(f"{n:>5} " + " ".join(f"{m:>9.4f}" for m in means) + f"  {d(n, story, control)}")
+    for arm, label in ((story, "role story"), (control, "role control")):
+        print(f"\n{label} minus each reference [95% CI]")
+        print(f"{'n':>5} " + " ".join(f"{f'{label} - {r}':>28}" for r in ("native", "preproc", "it1 story")))
+        for n in sizes:
+            print(f"{n:>5} " + " ".join(d(n, arm, r) for r in (native, preproc, it1)))
+    print("\nSecondary: support-only preprocessing (reviewer P3) [95% CI]")
+    print(f"{'n':>5} {'preproc-s - native':>28} {'preproc-s - preproc':>28}")
+    for n in sizes:
+        print(f"{n:>5} {d(n, pre_s, native)} {d(n, pre_s, preproc)}")
+    sample = role_eval.RESCORE_SCENES * len(sizes) * len(role_eval.REFERENCE_ARMS)
+    print(f"\nmax |reference rescored in stage 9 - stage 4/7 score| over {sample} cells: {drift:.2e}")
+    if drift > _REFERENCE_RESCORE_TOL:
+        print(f"FAIL: references differ on identical rows (tolerance {_REFERENCE_RESCORE_TOL:g})", file=sys.stderr)
+        return 1
+    return 0
+
+
+def print_role_reliability(args: argparse.Namespace) -> int:
+    """Corrupted minus correct roles for the role-token story adapter at n = 8, 16, 32."""
+    scenes, scores = _role_eval_scores(args.results)
+    story = role_eval.STORY
+    mix = json.loads((role_training.RESULTS_DIR / training.CONFIG_JSON).read_text())["story_mix_per_20"]
+    share = {k: v / sum(mix.values()) for k, v in mix.items()}
+    print(
+        f"Stage 9 role-reliability (D-09, H4): role-token story adapter, {len(scenes)} held-out scenes "
+        f"(families 4-5), stage 4 rows; paired per-scene change corrupted - correct roles query log loss, "
+        f"95% scene-bootstrap CI ({BOOTSTRAP_RESAMPLES} resamples)"
+    )
+    print(
+        "Corruptions: omitted = every slot neutral; irrelevant = a same-family donor's roles, truncated or "
+        "neutral-padded to p; wrong = roles permuted among the features."
+    )
+    print(
+        f"Training exposure (D-09): {share.get('omitted', 0):.0%} of story-arm episodes had all slots neutral "
+        f"and {share.get('one_wrong_fact', 0):.0%} one wrong role; donor roles and full permutations were never trained on."
+    )
+    head = " ".join(f"{c + ' - correct [95% CI]':>32}" for c in role_eval.CORRUPTIONS)
+    print(f"{'n':>5} {'correct':>8}  {head}")
+    for n in role_eval.RELIABILITY_SIZES:
+        base = _per_scene(scores, scenes, n, story)
+        cells = [
+            f"{_diff_cell(_per_scene(scores, scenes, n, role_eval.corrupted_label(c)) - base, digits=5):>32}"
+            for c in role_eval.CORRUPTIONS
+        ]
+        print(f"{n:>5} {base.mean():>8.4f}  " + " ".join(cells))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m texttabpfn.report")
     sub = parser.add_subparsers(dest="name", required=True)
@@ -597,6 +765,17 @@ def main(argv: list[str] | None = None) -> int:
     rol.add_argument("--results", type=Path, default=roleinfo.RESULTS_DIR)
     rol.add_argument("--primary", type=Path, default=evaluation.RESULTS_DIR)
     rol.set_defaults(func=print_roleinfo)
+    rpr = sub.add_parser("role-primary", help="stage 9: role-token story - control at n = 8, 16, 32, D-08 verdict")
+    rpr.add_argument("--results", type=Path, default=role_eval.RESULTS_DIR)
+    rpr.set_defaults(func=print_role_primary)
+    rcu = sub.add_parser("role-curve", help="stage 9: role-token arms vs control and references at every n")
+    rcu.add_argument("--results", type=Path, default=role_eval.RESULTS_DIR)
+    rcu.add_argument("--primary", type=Path, default=evaluation.RESULTS_DIR)
+    rcu.add_argument("--roleinfo", type=Path, default=roleinfo.RESULTS_DIR)
+    rcu.set_defaults(func=print_role_curve)
+    rre = sub.add_parser("role-reliability", help="stage 9: corrupted - correct roles at n = 8, 16, 32")
+    rre.add_argument("--results", type=Path, default=role_eval.RESULTS_DIR)
+    rre.set_defaults(func=print_role_reliability)
     args = parser.parse_args(argv)
     try:
         status = args.func(args)

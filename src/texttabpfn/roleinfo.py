@@ -60,26 +60,36 @@ METHOD = (
     "seed on support + query feature values"
 )
 
+# Rows the measurement-group collapse is fitted on: stage 7's (D-12) design uses
+# support + query feature values; "support" fits on support rows only and applies
+# the fitted transform to the query rows (stage 9 secondary arm).
+FIT_SUPPORT_QUERY = "support+query"
+FIT_SUPPORT = "support"
+FITS = (FIT_SUPPORT_QUERY, FIT_SUPPORT)
 
-def _first_component(x: np.ndarray) -> np.ndarray:
-    """First principal component scores of ``x`` (R, K, g), fitted per episode k."""
-    std = x.std(axis=0)
-    z = (x - x.mean(axis=0)) / np.where(std > 0, std, 1.0)
-    cov = np.einsum("rki,rkj->kij", z, z) / len(z)
+
+def _first_component(x: np.ndarray, fit_rows: int | None = None) -> np.ndarray:
+    """First principal component scores of ``x`` (R, K, g), fitted per episode k.
+
+    The mean, std and loadings come from the first ``fit_rows`` rows (all rows
+    when ``None``); the scores cover every row.
+    """
+    f = x if fit_rows is None else x[:fit_rows]
+    std = f.std(axis=0)
+    z = (x - f.mean(axis=0)) / np.where(std > 0, std, 1.0)
+    zf = z if fit_rows is None else z[:fit_rows]
+    cov = np.einsum("rki,rkj->kij", zf, zf) / len(zf)
     vec = np.linalg.eigh(cov)[1][..., -1]  # (K, g): eigenvector of the largest eigenvalue
     vec = vec * np.where(vec[:, :1] < 0, -1.0, 1.0)
     return np.einsum("rkg,kg->rk", z, vec)
 
 
-def role_preprocess(
-    roles: Sequence[Mapping[str, object]], x_support: np.ndarray, x_query: np.ndarray
+def _preprocess(
+    roles: Sequence[Mapping[str, object]],
+    x_support: np.ndarray,
+    x_query: np.ndarray,
+    fit_rows: int | None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Story-guided preprocessing (D-12) of support (N, K, p) and query (M, K, p) rows.
-
-    ``roles`` is ``Scene.describe()["roles"]``, one entry per column. The K
-    episodes (support seeds) are independent: each group collapse is fitted on
-    that episode's support plus query rows. Returns (N, K, p') and (M, K, p').
-    """
     if x_support.shape[-1] != len(roles) or x_query.shape[-1] != len(roles):
         raise ValueError(f"{len(roles)} roles for {x_support.shape[-1]} / {x_query.shape[-1]} columns")
     rows = np.concatenate([x_support, x_query]).astype(np.float64)
@@ -94,19 +104,44 @@ def role_preprocess(
                 continue
             groups_done.add(group)
             members = [i for i, r in enumerate(roles) if r["role"] == "measure" and r["group"] == group]
-            columns.append(_first_component(rows[..., members]))
+            columns.append(_first_component(rows[..., members], fit_rows))
         elif kind != "irrelevant":
             raise ValueError(f"unknown role {kind!r}")
     out = np.stack(columns, axis=-1).astype(x_support.dtype)
     return out[: len(x_support)], out[len(x_support) :]
 
 
+def role_preprocess(
+    roles: Sequence[Mapping[str, object]], x_support: np.ndarray, x_query: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Story-guided preprocessing (D-12) of support (N, K, p) and query (M, K, p) rows.
+
+    ``roles`` is ``Scene.describe()["roles"]``, one entry per column. The K
+    episodes (support seeds) are independent: each group collapse is fitted on
+    that episode's support plus query rows, so the query output depends on the
+    whole query batch. Returns (N, K, p') and (M, K, p').
+    """
+    return _preprocess(roles, x_support, x_query, None)
+
+
+def role_preprocess_support_fit(
+    roles: Sequence[Mapping[str, object]], x_support: np.ndarray, x_query: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """``role_preprocess`` with each group collapse fitted on the episode's support
+    rows only and applied unchanged to the query rows."""
+    return _preprocess(roles, x_support, x_query, len(x_support))
+
+
 def preprocess_episode(
-    roles: Sequence[Mapping[str, object]], arrays: tuple[np.ndarray, ...]
+    roles: Sequence[Mapping[str, object]], arrays: tuple[np.ndarray, ...], fit: str = FIT_SUPPORT_QUERY
 ) -> tuple[np.ndarray, ...]:
-    """``role_preprocess`` on a ``scene_episodes`` tuple (xs, ys, xq, yq); labels pass through."""
+    """Preprocessing of a whole ``scene_episodes`` tuple (xs, ys, xq, yq); labels pass
+    through. Pass the full query batch: the support+query fit depends on all of it."""
+    if fit not in FITS:
+        raise ValueError(f"unknown fit {fit!r}; expected one of {FITS}")
     xs, ys, xq, yq = arrays
-    xs, xq = role_preprocess(roles, xs, xq)
+    fn = role_preprocess if fit == FIT_SUPPORT_QUERY else role_preprocess_support_fit
+    xs, xq = fn(roles, xs, xq)
     return xs, ys, xq, yq
 
 

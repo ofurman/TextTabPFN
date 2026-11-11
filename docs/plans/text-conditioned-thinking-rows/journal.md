@@ -28,3 +28,15 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 
 ## 2026-11-10T23:25Z 02 re-plan
 - Keep 03 as carded; brief fills stage-2 API (adapter.conditioned, episode_logits, stories.scene_text variants). Cut nothing. Add nothing.
+
+## 2026-11-10T23:30Z 03 diagnostic (orchestrator, read-only)
+- MiniLM e(t) on 40 dev stories: story-story cos mean 0.964; same-p 0.989; residual norm after mean removal 0.185. Role info is a small residual of e(t).
+- Step 500 dev validation: story ≈ schema-only (n=8 0.5566 vs 0.5549; native 0.5634). Risk: encoder bottleneck, not channel (stage 1 ceiling 0.16). Run continues as carded.
+
+## 2026-11-11T02:45Z 03 Episodic training: DONE
+- `uv run python -m texttabpfn.report training` -> exit 0, 32000 episodes each arm; `--validation` -> exit 0, 17 checkpoints, both select step 3250.
+- Dev val mean: native 0.4464, story 0.4387, schema-only 0.4376; n=8 gain ~0.014 vs stage-1 ceiling 0.162. Commit bd92e7c.
+- Brief corrections: force_recompute_layer was False (7.4 GB at n=1024); gradient accumulation over 8 single-episode passes.
+
+## 2026-11-11T02:45Z 03 re-plan
+- Keep 04 and 05 as carded; run 04 then 05 (shared MPS). Cut nothing. B-12 stands as the main follow-up if 04 is null.

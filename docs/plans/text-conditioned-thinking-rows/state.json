@@ -40,14 +40,16 @@
     {
       "id": 3,
       "title": "Episodic training of story and schema-only arms",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "box": 6,
       "review": false,
       "depends": [
         2
       ],
-      "commit": null,
-      "note": "",
+      "commit": [
+        "bd92e7c"
+      ],
+      "note": "32k episodes per arm; selected step 3250 both; dev val story 0.4387 vs schema 0.4376 vs native 0.4464",
       "implementer": "omp/task, high",
       "reviewer": null,
       "fixRounds": 0,
@@ -56,7 +58,7 @@
     {
       "id": 4,
       "title": "Primary evaluation over support sizes",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "box": 3,
       "review": true,
       "depends": [
@@ -64,10 +66,10 @@
       ],
       "commit": null,
       "note": "",
-      "implementer": null,
+      "implementer": "omp/task, high",
       "reviewer": null,
       "fixRounds": 0,
-      "startedAt": null
+      "startedAt": "2026-11-11T02:50Z"
     },
     {
       "id": 5,

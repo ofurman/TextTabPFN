@@ -112,3 +112,11 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 - `report role-primary` -> exit 0; story-control -0.0042/-0.0042/-0.0041 at n=8/16/32, all CIs < 0; D-08 "supported" (4000-step); both families.
 - `report role-curve` -> exit 0; `report role-reliability` -> exit 0, all corruptions +0.0035..+0.0081 (CI > 0). Commit 5b8cd0d.
 - Preprocessing still beats role story at n<=32 (+0.008 at n=8). D-14 waits for stage 13 per D-15. Review dispatched (CPU only).
+
+## 2026-11-11T20:10Z 09 Role-token evaluation: DONE
+- Review: correct, no P0-P2; selection-step difference favours the control, not the story arm.
+- Correction to 19:20Z entry (F1): D-15 was decided while stage 9 was running (~80/200 scenes scored), without reading partial scores; it was an owner request.
+- F2 fixed in reports/09-implement.md (worse than native only at n>=512). F3 -> stage 12 brief (corruption ranking is point-estimate only; give slot-change rates).
+
+## 2026-11-11T20:10Z 09 re-plan
+- Keep 13 (training, ETA ~03:00Z), then D-14 on 10k verdict, 10, 11, 12. Cut nothing. Add nothing.

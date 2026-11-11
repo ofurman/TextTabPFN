@@ -145,7 +145,7 @@
     {
       "id": 9,
       "title": "Role-token held-out evaluation",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "box": 2,
       "review": true,
       "depends": [
@@ -154,9 +154,10 @@
       "commit": [
         "5b8cd0d"
       ],
-      "note": "",
+      "note": "4000-step role tokens: story-control -0.0042/-0.0042/-0.0041 at n=8/16/32, D-08 supported; all corruptions hurt",
       "startedAt": "2026-11-11T19:15Z",
-      "implementer": "omp/task, high"
+      "implementer": "omp/task, high",
+      "reviewer": "omp/reviewer, high"
     },
     {
       "id": 10,

@@ -34,7 +34,7 @@ D-08 verdict: **supported** (upper bound < 0 at all three n). Iteration 1 at the
 
 ## role-curve summary (paired differences, 95% CI)
 - Story − control: −0.0023 at n=64, −0.0013 at 128, −0.0006 at 256. At 512 and 1024 the CI includes 0 (−0.0003 and +0.0002).
-- Role story − native: −0.0080 / −0.0157 / −0.0124 at n = 8 / 16 / 32, −0.0061 at 64. From 256 up it is slightly worse than native (+0.0006 and +0.0008 at 512 and 1024, CIs above 0).
+- Role story − native: −0.0080 / −0.0157 / −0.0124 at n = 8 / 16 / 32, and −0.0061 at 64. It is slightly worse than native only at n = 512 and 1024: +0.0006 and +0.0008, with CIs above 0. At n = 256 the difference is +0.0002 [−0.0003, +0.0007], and the CI includes 0. (Corrected by the orchestrator after review finding F2.)
 - Role story − preproc (support+query): +0.0084 / +0.0046 / +0.0033 at n = 8 / 16 / 32, CIs above 0. Preprocessing still wins at small n; the role tokens recover about half of preproc's gain over native at n = 8. From n = 256 on, role story beats preproc, which degrades at large n.
 - Role story − iteration-1 story adapter: −0.0036 / −0.0042 / −0.0049 at n = 8 / 16 / 32, all CIs below 0.
 - Role control − native: −0.0038 / −0.0115 / −0.0083 at n = 8 / 16 / 32. Part of the role-token arms' gain is generic adaptation, which control also gets.

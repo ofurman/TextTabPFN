@@ -1,4 +1,4 @@
-# 05 Context reliability evaluation (implementer omp/task, high; box 2 h, stop by STOPBY)
+# 05 Context reliability evaluation (implementer omp/task, high; box 2 h, stop by 2026-11-11T06:00Z)
 
 Repo: /Users/ofurman/pwr/texttabpfn, branch `thinking-rows`. Read `docs/plans/text-conditioned-thinking-rows/index.md` (constraints), `decisions.md` (D-08, D-09, D-10) and the stage card `stages/05-context-reliability-evaluation.md`.
 
@@ -20,7 +20,12 @@ Report reads committed small CSV/JSON under `results/05-reliability/`; never rec
 
 ## Facts
 
-- STAGE4FACTS
+- Stage 4 code in `src/texttabpfn/evaluation.py`:
+  - `Settings` (200 scenes, n = 8…1024, 5 support seeds, 512 query rows) and `scenes.eval_scene_specs(num)` (families 4 and 5 alternating).
+  - `scene_episodes(settings, family, seed)` is a pure function that returns fixed query rows and nested stratified supports. Reuse it, restricted to n = 8, 16, 32, so the rows are identical to stage 4.
+  - Correct-story losses for the identical rows are in `results/04-primary/scores.csv`, which has columns family, seed, n, arm, logloss; `read_scores()` reads it.
+  - Stage 4 took about 6 s per scene for 3 arms × 8 n, so this stage's 3 corruptions × 3 n should take about 15–25 min.
+- Adapter: `training.load_adapter(model, 'story')`, using the selected step 3250. Use `adapter.episode_logits` with the encoder embedding of the corrupted text.
 - The MPS device is shared with stage 4; stage 4 has finished before this starts.
 
 ## Not in this stage

@@ -64,7 +64,9 @@
       "depends": [
         3
       ],
-      "commit": null,
+      "commit": [
+        "b97088c"
+      ],
       "note": "",
       "implementer": "omp/task, high",
       "reviewer": null,
@@ -74,7 +76,7 @@
     {
       "id": 5,
       "title": "Context reliability evaluation",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "box": 2,
       "review": false,
       "depends": [
@@ -82,10 +84,10 @@
       ],
       "commit": null,
       "note": "",
-      "implementer": null,
+      "implementer": "omp/task, high",
       "reviewer": null,
       "fixRounds": 0,
-      "startedAt": null
+      "startedAt": "2026-11-11T03:10Z"
     },
     {
       "id": 6,

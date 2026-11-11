@@ -40,3 +40,8 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 
 ## 2026-11-11T02:45Z 03 re-plan
 - Keep 04 and 05 as carded; run 04 then 05 (shared MPS). Cut nothing. B-12 stands as the main follow-up if 04 is null.
+
+## 2026-11-11T03:10Z 04 Primary evaluation: build accepted
+- `uv run python -m texttabpfn.report primary` -> exit 0; story-schema -0.0008/+0.0001/+0.0012 at n=8/16/32; CI at 32 [+0.0005,+0.0019]; D-08 verdict "harmful".
+- `uv run python -m texttabpfn.report curve` -> exit 0; both adapters beat native at n<=64 (n=16: -0.012); story slightly worse than native at n>=256 (+0.0006).
+- Commit b97088c. Review dispatched; stage 5 starts in parallel (reviewer runs CPU-only, read-only).

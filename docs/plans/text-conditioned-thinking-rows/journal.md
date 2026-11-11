@@ -65,3 +65,7 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 ## 2026-11-11T03:40Z 06 Results note: DONE
 - `grep -l '^Verdict:' docs/research/web/*-text-conditioned-thinking-rows-results.md` -> 1 file; `./scripts/lint_related_works.sh` -> passed (re-run once).
 - Note quotes report commands only; inference and mechanism labelled. Commit d6cdcef. Final review next.
+
+## 2026-11-11T03:50Z run complete
+- Final review: correct, no P0-P2; P3 (encoder-diagnostic provenance) fixed by orchestrator in the results note.
+- `./scripts/lint_related_works.sh` -> passed after the fix. All 6 stages DONE; see reports/final.md.

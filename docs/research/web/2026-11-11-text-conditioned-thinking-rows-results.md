@@ -110,7 +110,8 @@ Irrelevant stories and fully permuted roles were never seen in training.
 
 ## Confidence Notes
 
-- All numbers are quoted from `uv run python -m texttabpfn.report {capacity, capacity --arm per-column, training, training --validation, primary, curve, reliability}` on 2026-11-11.
+- All numbers except the encoder-similarity figures were quoted on 2026-11-11 from `uv run python -m texttabpfn.report` with the `capacity`, `capacity --arm per-column`, `training`, `training --validation`, `primary`, `curve` and `reliability` subcommands.
+- The encoder-similarity figures (0.964, 0.989, 0.185) come from a one-off diagnostic run during training. That diagnostic is recorded in the run [journal](../../plans/text-conditioned-thinking-rows/journal.md), entry 2026-11-10T23:30Z, and no committed command reproduces it.
 - CIs are 95% scene-bootstrap (1000 resamples) over paired per-scene differences; effects of 1e-3 nats are resolvable but small.
 - The encoder-similarity mechanism is a diagnostic correlation, not an ablation.
 

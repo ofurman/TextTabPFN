@@ -79,3 +79,13 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 - `uv run python -m texttabpfn.report roleinfo` -> exit 0; preproc-native -0.0165/-0.0204/-0.0156 at n=8/16/32, all CIs < 0; D-13 does not fire.
 - Native rescored = stage 4 native (max diff 0, 1600 cells). Preproc hurts at n>=256 (+0.013 at 1024). Commit 241746f.
 - Review dispatched (CPU-only) in parallel with stage 8 (MPS); stage 8 does not consume stage 7 code.
+
+## 2026-11-11T11:52Z clock correction
+- Iteration-2 journal timestamps 04:10Z-04:45Z were estimates; real clock (date -u) at stage 8 start is 11:51Z. Stage 8 stop-by corrected to 17:50Z; all later times use date -u.
+
+## 2026-11-11T11:58Z 07 Value of story roles: DONE
+- Review: correct, no P0-P2. P3-1 (part of gain from transductive PCA on query features; support-only keeps ~80% at n=8) -> stage 9 and 12 briefs label the arm. P3-2 (pass full query batch) -> stage 9 brief.
+- No fix round.
+
+## 2026-11-11T11:58Z 07 re-plan
+- Keep 08 (running), 09-12 as carded. Stage 9 adds a support-only-fit preprocessing variant as a secondary arm. Cut nothing.

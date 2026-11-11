@@ -113,16 +113,17 @@
     {
       "id": 7,
       "title": "Value of story roles to native TabPFN",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "box": 2,
       "review": true,
       "depends": [],
       "commit": [
         "241746f"
       ],
-      "note": "",
+      "note": "story-role preprocessing beats native by 0.016-0.020 at n=8-32 (CIs<0), hurts at n>=256; D-13 not fired",
       "startedAt": "2026-11-11T04:20Z",
-      "implementer": "omp/task, high"
+      "implementer": "omp/task, high",
+      "reviewer": "omp/reviewer, high"
     },
     {
       "id": 8,
@@ -135,7 +136,7 @@
       ],
       "commit": null,
       "note": "",
-      "startedAt": "2026-11-11T04:45Z",
+      "startedAt": "2026-11-11T11:51Z",
       "implementer": "omp/task, high"
     },
     {

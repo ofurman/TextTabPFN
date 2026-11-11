@@ -107,3 +107,8 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 - Owner: "Try also to train for 10k steps". Stage 13 added; D-15 fixes D-14 input to the 10k-step verdict, decided before any stage 9 held-out result.
 - Launched `uv run python -m texttabpfn.role_training --steps 10000 --val-every 500 --out results/13-role-training-10k` detached at 19:17Z; shares MPS with stage 9 inference.
 - Stage 10 now depends on 9 and 13. ETA for stage 13 training ~03:00Z.
+
+## 2026-11-11T19:55Z 09 Role-token evaluation: build accepted
+- `report role-primary` -> exit 0; story-control -0.0042/-0.0042/-0.0041 at n=8/16/32, all CIs < 0; D-08 "supported" (4000-step); both families.
+- `report role-curve` -> exit 0; `report role-reliability` -> exit 0, all corruptions +0.0035..+0.0081 (CI > 0). Commit 5b8cd0d.
+- Preprocessing still beats role story at n<=32 (+0.008 at n=8). D-14 waits for stage 13 per D-15. Review dispatched (CPU only).

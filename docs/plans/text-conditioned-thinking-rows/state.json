@@ -117,7 +117,9 @@
       "box": 2,
       "review": true,
       "depends": [],
-      "commit": null,
+      "commit": [
+        "241746f"
+      ],
       "note": "",
       "startedAt": "2026-11-11T04:20Z",
       "implementer": "omp/task, high"
@@ -125,14 +127,16 @@
     {
       "id": 8,
       "title": "Role-token adapter and matched control training",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "box": 6,
       "review": false,
       "depends": [
         7
       ],
       "commit": null,
-      "note": ""
+      "note": "",
+      "startedAt": "2026-11-11T04:45Z",
+      "implementer": "omp/task, high"
     },
     {
       "id": 9,

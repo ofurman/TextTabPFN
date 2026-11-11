@@ -74,3 +74,8 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 - Owner: "Do this as a followup: ... per-feature role tokens (backlog B-12). After that, try a stronger encoder (B-09) or a trained per-column arm (B-01)."
 - Planned stages 7-12, DoD 1-7 (iteration 2), D-11..D-14; lint_plan OK; run continues under existing PROTOCOL.md, same roles and reviews setting.
 - Added scope: stage 7 story-guided preprocessing as deciding number (D-12, D-13 stop rule).
+
+## 2026-11-11T04:45Z 07 Value of story roles: build accepted
+- `uv run python -m texttabpfn.report roleinfo` -> exit 0; preproc-native -0.0165/-0.0204/-0.0156 at n=8/16/32, all CIs < 0; D-13 does not fire.
+- Native rescored = stage 4 native (max diff 0, 1600 cells). Preproc hurts at n>=256 (+0.013 at 1024). Commit 241746f.
+- Review dispatched (CPU-only) in parallel with stage 8 (MPS); stage 8 does not consume stage 7 code.

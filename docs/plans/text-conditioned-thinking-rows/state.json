@@ -128,30 +128,33 @@
     {
       "id": 8,
       "title": "Role-token adapter and matched control training",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "box": 6,
       "review": false,
       "depends": [
         7
       ],
       "commit": [
-        "eaee451"
+        "eaee451",
+        "26aacb7"
       ],
-      "note": "",
+      "note": "32k episodes/arm; dev val story 0.4335 vs control 0.4381 vs native 0.4464; story selected at final step",
       "startedAt": "2026-11-11T11:51Z",
       "implementer": "omp/task, high"
     },
     {
       "id": 9,
       "title": "Role-token held-out evaluation",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "box": 2,
       "review": true,
       "depends": [
         8
       ],
       "commit": null,
-      "note": ""
+      "note": "",
+      "startedAt": "2026-11-11T19:15Z",
+      "implementer": "omp/task, high"
     },
     {
       "id": 10,

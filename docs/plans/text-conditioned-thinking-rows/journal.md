@@ -95,3 +95,10 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 - Kept: `uv run pytest -q tests_exp` -> 145 passed; all iteration-1 reports + roleinfo exit 0. Code committed eaee451.
 - Pilots (/tmp/rt_pilots, 200 steps, 16 dev scenes): lr 3e-4/1e-3/3e-3 all within ±0.009 of native; 3e-3 unstable for control. Full run uses lr 1e-3 (iteration-1 setting).
 - Orchestrator launched `nohup uv run python -m texttabpfn.role_training` directly (detached) so an API drop cannot stop it.
+
+## 2026-11-11T19:12Z 08 Role-token training: DONE
+- `uv run pytest tests_exp/test_role_tokens.py` -> 16 passed; `report role-training` -> exit 0, 32000 episodes each; `--validation` -> exit 0.
+- Dev val n=8: story 0.5403, control 0.5509, native 0.5634 (iteration 1: arms tied). Story selected at step 4000 (still improving). Commit 26aacb7.
+
+## 2026-11-11T19:12Z 08 re-plan
+- Keep 09 as carded. Cut nothing. Add nothing.

@@ -17,8 +17,9 @@ from pathlib import Path
 
 import numpy as np
 
-from texttabpfn import training
+from texttabpfn import evaluation, training
 from texttabpfn.capacity import ARMS, CONFIG_JSON, RESULTS_DIR, SUPPORT_SIZES, Settings, arm_csv
+from texttabpfn.scenes import HELDOUT_FAMILIES, eval_scene_specs
 
 BOOTSTRAP_RESAMPLES = 1000
 BOOTSTRAP_SEED = 0
@@ -262,6 +263,117 @@ def print_training_validation(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- Stage 4: primary evaluation ------------------------------------------------
+
+PRIMARY_SIZES = (8, 16, 32)
+# (label, minuend arm, subtrahend arm) for the paired per-scene differences.
+_PAIRS = (
+    ("story-schema", "story", "schema"),
+    ("story-native", "story", evaluation.NATIVE),
+    ("schema-native", "schema", evaluation.NATIVE),
+)
+
+
+def d08_verdict(cis: dict[int, tuple[float, float]]) -> str:
+    """D-08 verdict from the story-minus-schema CIs at n = 8, 16, 32."""
+    cis = {n: cis[n] for n in PRIMARY_SIZES}
+    if any(lo > 0 for lo, _ in cis.values()):
+        return "harmful"
+    if sum(hi < 0 for _, hi in cis.values()) >= 2:
+        return "supported"
+    return "not supported"
+
+
+def _evaluation_scores(
+    results_dir: Path, sizes: tuple[int, ...]
+) -> tuple[list[tuple[int, int]], dict[tuple[int, int, int, str], float]]:
+    """Scenes and scores; raises unless every (scene, n, arm) at ``sizes`` is finite."""
+    config_path = results_dir / evaluation.CONFIG_JSON
+    if not config_path.exists():
+        raise IncompleteResults(f"missing {config_path}")
+    config = json.loads(config_path.read_text())
+    settings = evaluation.settings_from_json(config["settings"])
+    if settings != evaluation.Settings():
+        raise IncompleteResults(f"settings {settings} differ from the D-08 design {evaluation.Settings()}")
+    scenes = [tuple(s) for s in config["scenes"]]
+    if scenes != eval_scene_specs(settings.num_scenes):
+        raise IncompleteResults(f"{config_path} lists other scenes than eval_scene_specs")
+    if not (results_dir / evaluation.SCORES_CSV).exists():
+        raise IncompleteResults(f"missing {results_dir / evaluation.SCORES_CSV}")
+    scores = evaluation.read_scores(results_dir)
+    missing = [
+        (f, s, n, arm)
+        for f, s in scenes
+        for n in sizes
+        for arm in evaluation.ARMS
+        if not math.isfinite(scores.get((f, s, n, arm), math.nan))
+    ]
+    if missing:
+        required = len(scenes) * len(sizes) * len(evaluation.ARMS)
+        raise IncompleteResults(
+            f"{len(missing)} of {required} (scene, n, arm) rows missing or non-finite (first: {missing[:3]})"
+        )
+    return scenes, scores
+
+
+def _per_scene(scores: dict, scenes: list[tuple[int, int]], n: int, arm: str) -> np.ndarray:
+    return np.array([scores[(f, s, n, arm)] for f, s in scenes])
+
+
+def _diff_cell(values: np.ndarray) -> str:
+    lo, hi = scene_bootstrap_ci(values)
+    return f"{values.mean():+.4f} [{lo:+.4f}, {hi:+.4f}]"
+
+
+def print_primary(args: argparse.Namespace) -> int:
+    """Story minus schema-only query log loss at n = 8, 16, 32 and the D-08 verdict."""
+    scenes, scores = _evaluation_scores(args.results, PRIMARY_SIZES)
+    print(
+        f"Stage 4 primary (D-08): {len(scenes)} held-out scenes (families 4-5), "
+        f"{evaluation.Settings().support_seeds} nested support seeds, "
+        f"{evaluation.Settings().query_rows} query rows; paired per-scene difference "
+        f"story - schema-only query log loss, 95% scene-bootstrap CI ({BOOTSTRAP_RESAMPLES} resamples)"
+    )
+    print(f"{'n':>5} {'native':>8} {'schema':>8} {'story':>8}  {'story - schema [95% CI]':>28}")
+    cis = {}
+    for n in PRIMARY_SIZES:
+        means = [_per_scene(scores, scenes, n, arm).mean() for arm in evaluation.ARMS]
+        diff = _per_scene(scores, scenes, n, "story") - _per_scene(scores, scenes, n, "schema")
+        cis[n] = scene_bootstrap_ci(diff)
+        print(f"{n:>5} " + " ".join(f"{m:>8.4f}" for m in means) + f"  {_diff_cell(diff):>28}")
+    print(f"D-08 verdict: {d08_verdict(cis)}")
+    print("\nSecondary: story - schema-only by held-out family [95% CI]")
+    families = {fam: [sc for sc in scenes if sc[0] == fam] for fam in HELDOUT_FAMILIES}
+    print(f"{'n':>5} " + " ".join(f"{f'family {fam} ({len(sub)} scenes)':>28}" for fam, sub in families.items()))
+    for n in PRIMARY_SIZES:
+        cells = []
+        for sub in families.values():
+            diff = _per_scene(scores, sub, n, "story") - _per_scene(scores, sub, n, "schema")
+            cells.append(f"{_diff_cell(diff):>28}")
+        print(f"{n:>5} " + " ".join(cells))
+    return 0
+
+
+def print_curve(args: argparse.Namespace) -> int:
+    """Paired differences between the three arms at every support size."""
+    sizes = evaluation.Settings().sizes
+    scenes, scores = _evaluation_scores(args.results, sizes)
+    print(
+        f"Stage 4 curve: {len(scenes)} held-out scenes; mean query log loss per arm and paired "
+        f"per-scene differences, 95% scene-bootstrap CI ({BOOTSTRAP_RESAMPLES} resamples)"
+    )
+    head = " ".join(f"{label + ' [95% CI]':>28}" for label, _, _ in _PAIRS)
+    print(f"{'n':>5} {'native':>8} {'schema':>8} {'story':>8}  {head}")
+    for n in sizes:
+        means = [_per_scene(scores, scenes, n, arm).mean() for arm in evaluation.ARMS]
+        cells = [
+            f"{_diff_cell(_per_scene(scores, scenes, n, a) - _per_scene(scores, scenes, n, b)):>28}"
+            for _, a, b in _PAIRS
+        ]
+        print(f"{n:>5} " + " ".join(f"{m:>8.4f}" for m in means) + "  " + " ".join(cells))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m texttabpfn.report")
     sub = parser.add_subparsers(dest="name", required=True)
@@ -275,6 +387,12 @@ def main(argv: list[str] | None = None) -> int:
     tra.add_argument("--validation", action="store_true", help="dev log loss per checkpoint")
     tra.add_argument("--results", type=Path, default=training.RESULTS_DIR)
     tra.set_defaults(func=print_training)
+    pri = sub.add_parser("primary", help="stage 4: story - schema-only at n = 8, 16, 32, D-08 verdict")
+    pri.add_argument("--results", type=Path, default=evaluation.RESULTS_DIR)
+    pri.set_defaults(func=print_primary)
+    cur = sub.add_parser("curve", help="stage 4: paired arm differences at every n")
+    cur.add_argument("--results", type=Path, default=evaluation.RESULTS_DIR)
+    cur.set_defaults(func=print_curve)
     args = parser.parse_args(argv)
     try:
         status = args.func(args)

@@ -71,6 +71,18 @@ def dev_scene_specs(num_scenes: int) -> list[tuple[int, int]]:
     return [(TRAIN_FAMILIES[i % 4], start + i) for i in range(num_scenes)]
 
 
+def eval_scene_specs(num_scenes: int) -> list[tuple[int, int]]:
+    """``(family, seed)`` for the first ``num_scenes`` evaluation scenes.
+
+    Held-out families 4-5 alternate, so an even count holds as many scenes of each.
+    """
+    start = EVAL_SEED_RANGE[0]
+    if num_scenes > EVAL_SEED_RANGE[1] - start:
+        raise ValueError("too many evaluation scenes for the evaluation seed range")
+    return [(HELDOUT_FAMILIES[i % 2], start + i) for i in range(num_scenes)]
+
+
+
 @dataclasses.dataclass(frozen=True)
 class ColumnRole:
     """Role of one observed column (column order = feature order in ``X``)."""

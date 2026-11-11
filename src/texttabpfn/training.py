@@ -269,11 +269,13 @@ def read_validation(out_dir: Path) -> dict[tuple[int, str, int], float]:
         }
 
 
-def select_checkpoints(settings: Settings, out_dir: Path) -> dict[str, tuple[int, float]]:
+def select_checkpoints(
+    settings: Settings, out_dir: Path, arms: tuple[str, ...] = ARMS
+) -> dict[str, tuple[int, float]]:
     """Per arm: the checkpoint step with the lowest mean dev loss over ``val_sizes``."""
     val = read_validation(out_dir)
     out = {}
-    for arm in ARMS:
+    for arm in arms:
         means = {
             step: float(np.mean([val[(step, arm, n)] for n in settings.val_sizes]))
             for step in checkpoint_steps(settings)
@@ -425,9 +427,12 @@ def run(settings: Settings, out_dir: Path) -> None:
     print(f"done: {summary}", flush=True)
 
 
-def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--out", type=Path, default=RESULTS_DIR)
+def parse_settings(
+    argv: list[str] | None, description: str, default_out: Path
+) -> tuple[Settings, Path]:
+    """``Settings`` (one flag per field, e.g. ``--lr``) and ``--out`` from the command line."""
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("--out", type=Path, default=default_out)
     defaults = Settings()
     for field in dataclasses.fields(Settings):
         default = getattr(defaults, field.name)
@@ -439,7 +444,11 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     values = {f.name: getattr(args, f.name) for f in dataclasses.fields(Settings)}
     values["val_sizes"] = tuple(values["val_sizes"])
-    run(Settings(**values), args.out)
+    return Settings(**values), args.out
+
+
+def main(argv: list[str] | None = None) -> None:
+    run(*parse_settings(argv, __doc__.splitlines()[0], RESULTS_DIR))
 
 
 if __name__ == "__main__":

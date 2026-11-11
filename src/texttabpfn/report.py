@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-from texttabpfn import evaluation, reliability, roleinfo, training
+from texttabpfn import evaluation, reliability, role_training, roleinfo, training
 from texttabpfn.capacity import ARMS, CONFIG_JSON, RESULTS_DIR, SUPPORT_SIZES, Settings, arm_csv
 from texttabpfn.scenes import HELDOUT_FAMILIES, eval_scene_specs
 
@@ -169,15 +169,20 @@ def _training_config(results_dir: Path) -> tuple[dict, training.Settings]:
 
 
 def print_training(args: argparse.Namespace) -> int:
-    """Episodes each arm completed; non-zero unless both arms finished the same full budget."""
+    """Episodes each arm completed; non-zero unless both arms finished the same full budget.
+
+    Serves ``training`` (stage 3) and ``role-training`` (stage 8) through
+    ``args.arms`` and ``args.label``.
+    """
     if args.validation:
         return print_training_validation(args)
+    arms = args.arms
     config, settings = _training_config(args.results)
     summary_path = args.results / training.SUMMARY_JSON
     if not summary_path.exists():
         raise IncompleteResults(f"missing {summary_path}: training has not finished")
     summary = json.loads(summary_path.read_text())
-    missing = [arm for arm in training.ARMS if arm not in summary["episodes"]]
+    missing = [arm for arm in arms if arm not in summary["episodes"]]
     if missing:
         raise IncompleteResults(f"arm(s) {missing} missing from {summary_path}")
     # The last progress row per arm must agree with the summary counts.
@@ -186,26 +191,27 @@ def print_training(args: argparse.Namespace) -> int:
         for row in csv.DictReader(fh):
             last[row["arm"]] = (int(row["step"]), int(row["episodes"]))
     print(
-        f"Stage 3 training: {settings.steps} steps x {settings.episodes_per_step} episodes, "
+        f"{args.label} training: {settings.steps} steps x {settings.episodes_per_step} episodes, "
         f"Adam lr {settings.lr:g} (warm-up {settings.warmup_steps}, cosine to "
         f"{settings.final_lr_ratio:g}x), train wall {summary['train_wall_s'] / 3600:.2f} h"
     )
-    print(f"{'arm':>6} {'episodes':>9} {'last logged step':>16} {'selected step':>13} {'dev val loss':>12}")
-    for arm in training.ARMS:
+    w = max(6, *map(len, arms))
+    print(f"{'arm':>{w}} {'episodes':>9} {'last logged step':>16} {'selected step':>13} {'dev val loss':>12}")
+    for arm in arms:
         sel = summary["selected"][arm]
         step, _ = last.get(arm, (-1, -1))
         print(
-            f"{arm:>6} {summary['episodes'][arm]:>9} {step:>16} {sel['step']:>13} "
+            f"{arm:>{w}} {summary['episodes'][arm]:>9} {step:>16} {sel['step']:>13} "
             f"{sel['val_logloss_mean']:>12.4f}"
         )
-    counts = {summary["episodes"][arm] for arm in training.ARMS}
+    counts = {summary["episodes"][arm] for arm in arms}
     if len(counts) != 1:
         print(f"FAIL: episode counts differ: {summary['episodes']}", file=sys.stderr)
         return 1
     if counts != {settings.episodes}:
         print(f"FAIL: arms completed {counts.pop()} episodes; budget is {settings.episodes}", file=sys.stderr)
         return 1
-    for arm in training.ARMS:
+    for arm in arms:
         if last.get(arm) != (settings.steps, settings.episodes):
             print(f"FAIL: progress.csv for {arm} ends at {last.get(arm)}", file=sys.stderr)
             return 1
@@ -214,6 +220,7 @@ def print_training(args: argparse.Namespace) -> int:
 
 def print_training_validation(args: argparse.Namespace) -> int:
     """Dev validation log loss per arm at every checkpoint; non-zero if a row is missing."""
+    arms = args.arms
     _, settings = _training_config(args.results)
     val_path = args.results / training.VALIDATION_CSV
     if not val_path.exists():
@@ -222,13 +229,13 @@ def print_training_validation(args: argparse.Namespace) -> int:
     sizes = settings.val_sizes
     steps = training.checkpoint_steps(settings)
     required = [(0, training.NATIVE, n) for n in sizes]
-    required += [(s, arm, n) for s in steps for arm in training.ARMS for n in sizes]
+    required += [(s, arm, n) for s in steps for arm in arms for n in sizes]
     missing = [key for key in required if key not in val or not math.isfinite(val[key])]
     if missing:
         raise IncompleteResults(
             f"{len(missing)} of {len(required)} checkpoint rows missing (first: {missing[:3]})"
         )
-    selected = training.select_checkpoints(settings, args.results)
+    selected = training.select_checkpoints(settings, args.results, arms)
     summary_path = args.results / training.SUMMARY_JSON
     if summary_path.exists():
         recorded = json.loads(summary_path.read_text())["selected"]
@@ -237,12 +244,12 @@ def print_training_validation(args: argparse.Namespace) -> int:
                 print(f"FAIL: summary.json selects step {recorded[arm]['step']} for {arm}", file=sys.stderr)
                 return 1
     print(
-        f"Stage 3 dev validation log loss ({settings.val_scenes} dev scenes, families 0-3, "
+        f"{args.label} dev validation log loss ({settings.val_scenes} dev scenes, families 0-3, "
         f"{settings.val_support_seeds} support seeds, {settings.val_query_rows} query rows); "
         "* = selected checkpoint (lowest mean)"
     )
     cols = [f"n={n}" for n in sizes] + ["mean"]
-    head = "  ".join(f"{arm}:" + " ".join(f"{c:>7}" for c in cols) for arm in training.ARMS)
+    head = "  ".join(f"{arm}:" + " ".join(f"{c:>7}" for c in cols) for arm in arms)
     print(f"{'step':>6}  {head}")
 
     def cells(step: int, arm: str) -> str:
@@ -251,10 +258,10 @@ def print_training_validation(args: argparse.Namespace) -> int:
 
     native = [val[(0, training.NATIVE, n)] for n in sizes]
     native_cells = " ".join(f"{x:>7.4f}" for x in [*native, float(np.mean(native))])
-    print(f"{'native':>6}  " + "  ".join(f"{' ' * len(arm)} {native_cells}" for arm in training.ARMS))
+    print(f"{'native':>6}  " + "  ".join(f"{' ' * len(arm)} {native_cells}" for arm in arms))
     for step in steps:
         parts = []
-        for arm in training.ARMS:
+        for arm in arms:
             mark = "*" if selected[arm][0] == step else " "
             parts.append(f"{' ' * (len(arm) - 1)}{mark} {cells(step, arm)}")
         print(f"{step:>6}  " + "  ".join(parts))
@@ -571,7 +578,11 @@ def main(argv: list[str] | None = None) -> int:
     tra = sub.add_parser("training", help="stage 3: episodes per arm and dev validation")
     tra.add_argument("--validation", action="store_true", help="dev log loss per checkpoint")
     tra.add_argument("--results", type=Path, default=training.RESULTS_DIR)
-    tra.set_defaults(func=print_training)
+    tra.set_defaults(func=print_training, arms=training.ARMS, label="Stage 3")
+    rtr = sub.add_parser("role-training", help="stage 8: role-token episodes per arm and dev validation")
+    rtr.add_argument("--validation", action="store_true", help="dev log loss per checkpoint")
+    rtr.add_argument("--results", type=Path, default=role_training.RESULTS_DIR)
+    rtr.set_defaults(func=print_training, arms=role_training.ARMS, label="Stage 8 role-token")
     pri = sub.add_parser("primary", help="stage 4: story - schema-only at n = 8, 16, 32, D-08 verdict")
     pri.add_argument("--results", type=Path, default=evaluation.RESULTS_DIR)
     pri.set_defaults(func=print_primary)

@@ -120,3 +120,7 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 
 ## 2026-11-11T20:10Z 09 re-plan
 - Keep 13 (training, ETA ~03:00Z), then D-14 on 10k verdict, 10, 11, 12. Cut nothing. Add nothing.
+
+## 2026-11-11T19:43Z timestamp correction
+- Entries stamped 19:55Z and 20:10Z were written earlier (~19:40Z); stamps were estimates. From here, stamps come from date -u.
+- 10k run: step 275 at 1358 s (≈4.9 s/step while sharing MPS with stage 9); now alone, expected ≈2.65 s/step, ETA ≈03:15Z.

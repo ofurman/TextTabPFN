@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-from texttabpfn import evaluation, training
+from texttabpfn import evaluation, reliability, training
 from texttabpfn.capacity import ARMS, CONFIG_JSON, RESULTS_DIR, SUPPORT_SIZES, Settings, arm_csv
 from texttabpfn.scenes import HELDOUT_FAMILIES, eval_scene_specs
 
@@ -320,9 +320,9 @@ def _per_scene(scores: dict, scenes: list[tuple[int, int]], n: int, arm: str) ->
     return np.array([scores[(f, s, n, arm)] for f, s in scenes])
 
 
-def _diff_cell(values: np.ndarray) -> str:
+def _diff_cell(values: np.ndarray, digits: int = 4) -> str:
     lo, hi = scene_bootstrap_ci(values)
-    return f"{values.mean():+.4f} [{lo:+.4f}, {hi:+.4f}]"
+    return f"{values.mean():+.{digits}f} [{lo:+.{digits}f}, {hi:+.{digits}f}]"
 
 
 def print_primary(args: argparse.Namespace) -> int:
@@ -374,6 +374,97 @@ def print_curve(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- Stage 5: context reliability ----------------------------------------------
+
+# Largest |story rescored in stage 5 - story arm of stage 4| allowed on identical rows.
+_STORY_RESCORE_TOL = 1e-4
+
+
+def _reliability_scores(
+    results_dir: Path,
+) -> tuple[dict, list[tuple[int, int]], dict[tuple[int, int, int, str], float]]:
+    """Config, scenes and scores; raises unless every (scene, n, text) is finite."""
+    config_path = results_dir / reliability.CONFIG_JSON
+    if not config_path.exists():
+        raise IncompleteResults(f"missing {config_path}")
+    config = json.loads(config_path.read_text())
+    saved = config["settings"]
+    settings = reliability.Settings(num_scenes=saved["num_scenes"], sizes=tuple(saved["sizes"]))
+    if settings != reliability.Settings():
+        raise IncompleteResults(f"settings {settings} differ from the stage 5 design {reliability.Settings()}")
+    if evaluation.settings_from_json(config["row_settings"]) != evaluation.Settings():
+        raise IncompleteResults(f"{config_path} rows were not built with the D-08 settings")
+    if tuple(config["texts"]) != reliability.TEXTS:
+        raise IncompleteResults(f"{config_path} texts {config['texts']} differ from {reliability.TEXTS}")
+    scenes = [tuple(s) for s in config["scenes"]]
+    if scenes != eval_scene_specs(settings.num_scenes):
+        raise IncompleteResults(f"{config_path} lists other scenes than eval_scene_specs")
+    if not (results_dir / reliability.SCORES_CSV).exists():
+        raise IncompleteResults(f"missing {results_dir / reliability.SCORES_CSV}")
+    scores = reliability.read_scores(results_dir)
+    missing = [
+        (f, s, n, text)
+        for f, s in scenes
+        for n in settings.sizes
+        for text in reliability.TEXTS
+        if not math.isfinite(scores.get((f, s, n, text), math.nan))
+    ]
+    if missing:
+        required = len(scenes) * len(settings.sizes) * len(reliability.TEXTS)
+        raise IncompleteResults(
+            f"{len(missing)} of {required} (scene, n, text) rows missing or non-finite (first: {missing[:3]})"
+        )
+    return config, scenes, scores
+
+
+def print_reliability(args: argparse.Namespace) -> int:
+    """Corrupted minus correct-story log loss of the story adapter at n = 8, 16, 32."""
+    config, scenes, scores = _reliability_scores(args.results)
+    primary_scenes, primary = _evaluation_scores(args.primary, reliability.SIZES)
+    if primary_scenes != scenes:
+        raise IncompleteResults(f"{args.primary} scores other scenes than {args.results}")
+    correct = reliability.CORRECT
+    mix = config["training_story_mix_per_20"]
+    share = {k: v / sum(mix.values()) for k, v in mix.items()}
+    print(
+        f"Stage 5 reliability (D-09, H4): story adapter (stage 3 step {config['checkpoint']['step']}), "
+        f"{len(scenes)} held-out scenes (families 4-5), stage 4 rows ({evaluation.Settings().support_seeds} "
+        f"nested support seeds, {evaluation.Settings().query_rows} query rows); paired per-scene change "
+        f"corrupted - correct story query log loss, 95% scene-bootstrap CI ({BOOTSTRAP_RESAMPLES} resamples)"
+    )
+    print(
+        f"Training exposure (D-09): {share.get('omitted', 0):.0%} of story-arm episodes omitted the story "
+        f"and {share.get('one_wrong_fact', 0):.0%} had one wrong fact; irrelevant stories and fully "
+        "permuted roles were never trained on."
+    )
+    head = " ".join(f"{c + ' - story [95% CI]':>32}" for c in reliability.CORRUPTIONS)
+    print(f"{'n':>5} {'story':>8}  {head}")
+    for n in reliability.SIZES:
+        base = _per_scene(scores, scenes, n, correct)
+        cells = [
+            f"{_diff_cell(_per_scene(scores, scenes, n, c) - base, digits=5):>32}"
+            for c in reliability.CORRUPTIONS
+        ]
+        print(f"{n:>5} {base.mean():>8.4f}  " + " ".join(cells))
+
+    print("\nSecondary (context, not a check): stage 4 arms on the same rows minus the correct story [95% CI]")
+    print(f"{'n':>5} {'schema-only arm - story':>32} {'native - story':>32}")
+    drift = 0.0
+    for n in reliability.SIZES:
+        base = _per_scene(scores, scenes, n, correct)
+        drift = max(drift, float(np.abs(base - _per_scene(primary, scenes, n, "story")).max()))
+        cells = [
+            f"{_diff_cell(_per_scene(primary, scenes, n, arm) - base, digits=5):>32}"
+            for arm in ("schema", evaluation.NATIVE)
+        ]
+        print(f"{n:>5} " + " ".join(cells))
+    print(f"max |story rescored here - stage 4 story arm| over {len(scenes) * len(reliability.SIZES)} cells: {drift:.2e}")
+    if drift > _STORY_RESCORE_TOL:
+        print(f"FAIL: rows differ from stage 4 (tolerance {_STORY_RESCORE_TOL:g})", file=sys.stderr)
+        return 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m texttabpfn.report")
     sub = parser.add_subparsers(dest="name", required=True)
@@ -393,6 +484,10 @@ def main(argv: list[str] | None = None) -> int:
     cur = sub.add_parser("curve", help="stage 4: paired arm differences at every n")
     cur.add_argument("--results", type=Path, default=evaluation.RESULTS_DIR)
     cur.set_defaults(func=print_curve)
+    rel = sub.add_parser("reliability", help="stage 5: corrupted - correct story at n = 8, 16, 32")
+    rel.add_argument("--results", type=Path, default=reliability.RESULTS_DIR)
+    rel.add_argument("--primary", type=Path, default=evaluation.RESULTS_DIR)
+    rel.set_defaults(func=print_reliability)
     args = parser.parse_args(argv)
     try:
         status = args.func(args)

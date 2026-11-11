@@ -127,38 +127,46 @@ def settings_from_json(d: dict) -> Settings:
     return Settings(**{**d, "sizes": tuple(d["sizes"])})
 
 
-def read_scores(out_dir: Path) -> dict[tuple[int, int, int, str], float]:
-    """``(family, seed, n, arm) -> logloss`` from ``scores.csv``."""
+def read_scores(out_dir: Path, label: str = "arm") -> dict[tuple[int, int, int, str], float]:
+    """``(family, seed, n, label) -> logloss`` from ``scores.csv``."""
     with (out_dir / SCORES_CSV).open() as fh:
         return {
-            (int(r["family"]), int(r["seed"]), int(r["n"]), r["arm"]): float(r["logloss"])
+            (int(r["family"]), int(r["seed"]), int(r["n"]), r[label]): float(r["logloss"])
             for r in csv.DictReader(fh)
         }
 
 
-def _complete_scenes(settings: Settings, out_dir: Path) -> set[tuple[int, int]]:
-    """Keep the rows of scenes with every (n, arm) row; drop the rest from the CSV."""
-    path = out_dir / SCORES_CSV
+def keep_complete_scenes(
+    path: Path, fields: tuple[str, ...], need: set[tuple[int, str]]
+) -> set[tuple[int, int]]:
+    """Keep the rows of scenes with every ``(n, label)`` row in ``need`` (``label`` is
+    ``fields[3]``); drop the rest from the CSV, creating it when absent."""
+    label = fields[3]
     if not path.exists():
         with path.open("w", newline="") as fh:
-            csv.writer(fh).writerow(SCORE_FIELDS)
+            csv.writer(fh).writerow(fields)
         return set()
     with path.open() as fh:
         rows = list(csv.DictReader(fh))
     per_scene: dict[tuple[int, int], set[tuple[int, str]]] = {}
     for r in rows:
-        per_scene.setdefault((int(r["family"]), int(r["seed"])), set()).add((int(r["n"]), r["arm"]))
-    need = {(n, arm) for n in settings.sizes for arm in ARMS}
+        per_scene.setdefault((int(r["family"]), int(r["seed"])), set()).add((int(r["n"]), r[label]))
     done = {scene for scene, keys in per_scene.items() if keys == need}
     with path.open("w", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=SCORE_FIELDS)
+        writer = csv.DictWriter(fh, fieldnames=fields)
         writer.writeheader()
         writer.writerows(r for r in rows if (int(r["family"]), int(r["seed"])) in done)
     return done
 
 
+def _complete_scenes(settings: Settings, out_dir: Path) -> set[tuple[int, int]]:
+    """Keep the rows of scenes with every (n, arm) row; drop the rest from the CSV."""
+    need = {(n, arm) for n in settings.sizes for arm in ARMS}
+    return keep_complete_scenes(out_dir / SCORES_CSV, SCORE_FIELDS, need)
+
+
 @torch.no_grad()
-def _logloss(logits_fn, episode: tuple[torch.Tensor, ...], chunk: int) -> float:
+def query_logloss(logits_fn, episode: tuple[torch.Tensor, ...], chunk: int) -> float:
     """Mean query cross-entropy over all support seeds, ``chunk`` seeds per forward."""
     xs, ys, xq, yq = episode
     total, count = 0.0, 0
@@ -217,7 +225,7 @@ def run(settings: Settings, out_dir: Path, chunk: int) -> None:
             for n in settings.sizes:
                 episode = tuple(torch.as_tensor(a, device=device) for a in se.arrays[n])
                 for arm in ARMS:
-                    loss = _logloss(logits_fn(arm, embeddings.get(arm)), episode, chunk)
+                    loss = query_logloss(logits_fn(arm, embeddings.get(arm)), episode, chunk)
                     rows.append([family, seed, n, arm, f"{loss:.6f}"])
             # One append per scene: a scene's rows land together or not at all.
             with (out_dir / SCORES_CSV).open("a", newline="") as fh:

@@ -94,7 +94,7 @@
     {
       "id": 6,
       "title": "Results note and verdict",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "box": 1,
       "review": false,
       "depends": [
@@ -103,10 +103,10 @@
       ],
       "commit": null,
       "note": "",
-      "implementer": null,
+      "implementer": "omp/task, high",
       "reviewer": null,
       "fixRounds": 0,
-      "startedAt": null
+      "startedAt": "2026-11-11T03:30Z"
     }
   ],
   "settings": {

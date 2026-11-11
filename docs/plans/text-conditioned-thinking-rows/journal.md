@@ -45,3 +45,19 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 - `uv run python -m texttabpfn.report primary` -> exit 0; story-schema -0.0008/+0.0001/+0.0012 at n=8/16/32; CI at 32 [+0.0005,+0.0019]; D-08 verdict "harmful".
 - `uv run python -m texttabpfn.report curve` -> exit 0; both adapters beat native at n<=64 (n=16: -0.012); story slightly worse than native at n>=256 (+0.0006).
 - Commit b97088c. Review dispatched; stage 5 starts in parallel (reviewer runs CPU-only, read-only).
+
+## 2026-11-11T03:20Z 04 Primary evaluation: DONE
+- Review: verdict correct, CPU re-score of 12 values equals scores.csv; no P0-P2.
+- F1 (P3, verdict precedence harmful-before-supported) -> note in stage 6 results; no effect here. F2 (P3, report lacks checkpoint cross-check) -> backlog B-13.
+- No fix round needed.
+
+## 2026-11-11T03:20Z 04 re-plan
+- Keep 05 (running) and 06. Stage 6 brief adds the precedence note and the ~1e-3 magnitude framing. Add B-13.
+
+## 2026-11-11T03:25Z 05 Context reliability: DONE
+- `uv run python -m texttabpfn.report reliability` -> exit 0; omitted-story +0.0015 [+0.0010,+0.0020] at n=8; irrelevant, wrong CIs include 0 at all n.
+- Rows identical to stage 4 (max |diff| 0 over 600 cells). Commit 6b10c09.
+- Reading: the adapter responds to story presence, not content. Brief error: rows must be built with full stage-4 settings (pool size depends on max n).
+
+## 2026-11-11T03:25Z 05 re-plan
+- Keep 06 as carded; brief gets stage-5 numbers. Cut nothing. Add nothing.

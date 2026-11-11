@@ -58,7 +58,7 @@
     {
       "id": 4,
       "title": "Primary evaluation over support sizes",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "box": 3,
       "review": true,
       "depends": [
@@ -67,23 +67,25 @@
       "commit": [
         "b97088c"
       ],
-      "note": "",
+      "note": "D-08 verdict harmful: story-schema +0.0012 [+0.0005,+0.0019] at n=32; |effects| ~1e-3 nats; adapters beat native at n<=64",
       "implementer": "omp/task, high",
-      "reviewer": null,
+      "reviewer": "omp/reviewer, high",
       "fixRounds": 0,
       "startedAt": "2026-11-11T02:50Z"
     },
     {
       "id": 5,
       "title": "Context reliability evaluation",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "box": 2,
       "review": false,
       "depends": [
         3
       ],
-      "commit": null,
-      "note": "",
+      "commit": [
+        "6b10c09"
+      ],
+      "note": "omitted-story +0.0015/+0.0007/+0.0007 (CI>0); irrelevant and wrong CIs include 0; story content not used",
       "implementer": "omp/task, high",
       "reviewer": null,
       "fixRounds": 0,

@@ -12,3 +12,4 @@
 - B-10: Ablate a shared or low-rank W against the per-row Wᵢ (about 4.7M parameters) to check for overfitting (from: planning)
 - B-11: Interaction-family measurement nodes with one parent can get a sign-dropping tanh(h)^2 term, leaving some measure columns with low MI with y (family 4: 12/73); revisit if reliability results look odd (from: stage 01)
 - B-12: Structured story encoding (per-feature role tokens or index-aware text encoding) if MiniLM mean-pooled stories prove too similar (same-p cosine 0.989) to carry roles (from: stage 03)
+- B-13: Make `report primary`/`curve` cross-check `results/04-primary/config.json` checkpoints and arm texts against stage 3 `summary.json` (from: stage 04 review)

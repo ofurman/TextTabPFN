@@ -61,3 +61,7 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 
 ## 2026-11-11T03:25Z 05 re-plan
 - Keep 06 as carded; brief gets stage-5 numbers. Cut nothing. Add nothing.
+
+## 2026-11-11T03:40Z 06 Results note: DONE
+- `grep -l '^Verdict:' docs/research/web/*-text-conditioned-thinking-rows-results.md` -> 1 file; `./scripts/lint_related_works.sh` -> passed (re-run once).
+- Note quotes report commands only; inference and mechanism labelled. Commit d6cdcef. Final review next.

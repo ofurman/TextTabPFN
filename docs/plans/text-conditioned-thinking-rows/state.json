@@ -94,15 +94,17 @@
     {
       "id": 6,
       "title": "Results note and verdict",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "box": 1,
       "review": false,
       "depends": [
         4,
         5
       ],
-      "commit": null,
-      "note": "",
+      "commit": [
+        "d6cdcef"
+      ],
+      "note": "results note with Verdict: harmful (~1e-3 nats); lint passes",
       "implementer": "omp/task, high",
       "reviewer": null,
       "fixRounds": 0,

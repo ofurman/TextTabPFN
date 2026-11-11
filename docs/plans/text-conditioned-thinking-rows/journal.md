@@ -69,3 +69,8 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 ## 2026-11-11T03:50Z run complete
 - Final review: correct, no P0-P2; P3 (encoder-diagnostic provenance) fixed by orchestrator in the results note.
 - `./scripts/lint_related_works.sh` -> passed after the fix. All 6 stages DONE; see reports/final.md.
+
+## 2026-11-11T04:10Z iteration 2 started
+- Owner: "Do this as a followup: ... per-feature role tokens (backlog B-12). After that, try a stronger encoder (B-09) or a trained per-column arm (B-01)."
+- Planned stages 7-12, DoD 1-7 (iteration 2), D-11..D-14; lint_plan OK; run continues under existing PROTOCOL.md, same roles and reviews setting.
+- Added scope: stage 7 story-guided preprocessing as deciding number (D-12, D-13 stop rule).

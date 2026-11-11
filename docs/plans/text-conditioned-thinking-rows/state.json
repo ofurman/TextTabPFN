@@ -1,6 +1,6 @@
 {
   "plan": "text-conditioned-thinking-rows",
-  "iteration": 1,
+  "iteration": 2,
   "stages": [
     {
       "id": 1,
@@ -109,6 +109,77 @@
       "reviewer": null,
       "fixRounds": 0,
       "startedAt": "2026-11-11T03:30Z"
+    },
+    {
+      "id": 7,
+      "title": "Value of story roles to native TabPFN",
+      "status": "PENDING",
+      "box": 2,
+      "review": true,
+      "depends": [],
+      "commit": null,
+      "note": ""
+    },
+    {
+      "id": 8,
+      "title": "Role-token adapter and matched control training",
+      "status": "PENDING",
+      "box": 6,
+      "review": false,
+      "depends": [
+        7
+      ],
+      "commit": null,
+      "note": ""
+    },
+    {
+      "id": 9,
+      "title": "Role-token held-out evaluation",
+      "status": "PENDING",
+      "box": 2,
+      "review": true,
+      "depends": [
+        8
+      ],
+      "commit": null,
+      "note": ""
+    },
+    {
+      "id": 10,
+      "title": "Follow-on arm training",
+      "status": "PENDING",
+      "box": 6,
+      "review": false,
+      "depends": [
+        9
+      ],
+      "commit": null,
+      "note": ""
+    },
+    {
+      "id": 11,
+      "title": "Follow-on held-out evaluation",
+      "status": "PENDING",
+      "box": 2,
+      "review": true,
+      "depends": [
+        10
+      ],
+      "commit": null,
+      "note": ""
+    },
+    {
+      "id": 12,
+      "title": "Iteration-2 results note",
+      "status": "PENDING",
+      "box": 1,
+      "review": false,
+      "depends": [
+        9,
+        11
+      ],
+      "commit": null,
+      "note": ""
     }
   ],
   "settings": {

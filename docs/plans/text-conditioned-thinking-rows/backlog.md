@@ -1,6 +1,6 @@
 # Backlog
 
-- B-01: Train a per-column conditioning arm (θ_tg, design B of the 2026-11-04 note) if the stage 1 per-column capacity clearly exceeds the shared-row capacity (from: planning)
+- B-01: (iteration 2: stage 10 if D-14 selects it) Train a per-column conditioning arm (θ_tg, design B of the 2026-11-04 note) if the stage 1 per-column capacity clearly exceeds the shared-row capacity (from: planning)
 - B-02: Run the adapter inside each ensemble member of the sklearn wrapper, recomputing groups after each feature shuffle, and compare with the ensembled native model (from: planning)
 - B-03: Measure H2 as the number of labels each arm needs to reach a fixed query log loss (from: planning)
 - B-04: Evaluate on LLM-paraphrased and CausalDS-style held-out stories to test transfer from templates (from: planning)
@@ -8,8 +8,10 @@
 - B-06: Condition the thinking rows in every layer (B-deep) or add LoRA if the input-only channel saturates (from: planning)
 - B-07: Build the two-stage graph interface (design S) as an alternative to raw-text conditioning (from: planning)
 - B-08: Add related-work notes and PDFs for TabPFN-2.5 and TuneTables under the AGENTS.md maintenance rules (from: planning)
-- B-09: Ablate the encoder with bge-base-en-v1.5 (768-d, 512 tokens) (from: planning)
+- B-09: (iteration 2: stage 10 if D-14 selects it) Ablate the encoder with bge-base-en-v1.5 (768-d, 512 tokens) (from: planning)
 - B-10: Ablate a shared or low-rank W against the per-row Wᵢ (about 4.7M parameters) to check for overfitting (from: planning)
 - B-11: Interaction-family measurement nodes with one parent can get a sign-dropping tanh(h)^2 term, leaving some measure columns with low MI with y (family 4: 12/73); revisit if reliability results look odd (from: stage 01)
-- B-12: Structured story encoding (per-feature role tokens or index-aware text encoding) if MiniLM mean-pooled stories prove too similar (same-p cosine 0.989) to carry roles (from: stage 03)
+- B-12: (iteration 2: stages 8–9) Structured story encoding (per-feature role tokens or index-aware text encoding) if MiniLM mean-pooled stories prove too similar (same-p cosine 0.989) to carry roles (from: stage 03)
 - B-13: Make `report primary`/`curve` cross-check `results/04-primary/config.json` checkpoints and arm texts against stage 3 `summary.json` (from: stage 04 review)
+- B-14: Extract per-feature role facts from free-form or LLM-paraphrased stories with a local LLM, feeding the role-token interface (D-11) (from: planning)
+- B-15: Corruption runs for the follow-on arm of stage 10 (from: planning)

@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-from texttabpfn import evaluation, reliability, training
+from texttabpfn import evaluation, reliability, roleinfo, training
 from texttabpfn.capacity import ARMS, CONFIG_JSON, RESULTS_DIR, SUPPORT_SIZES, Settings, arm_csv
 from texttabpfn.scenes import HELDOUT_FAMILIES, eval_scene_specs
 
@@ -465,6 +465,100 @@ def print_reliability(args: argparse.Namespace) -> int:
     return 0
 
 
+# --- Stage 7: value of story roles to native TabPFN ----------------------------
+
+# Largest |native rescored in stage 7 - native arm of stage 4| allowed on identical rows.
+_NATIVE_RESCORE_TOL = 1e-6
+
+
+def _roleinfo_scores(
+    results_dir: Path,
+) -> tuple[list[tuple[int, int]], dict[tuple[int, int, int, str], float]]:
+    """Scenes and scores; raises unless the design matches and every (scene, n, arm) is finite."""
+    config_path = results_dir / roleinfo.CONFIG_JSON
+    if not config_path.exists():
+        raise IncompleteResults(f"missing {config_path}")
+    config = json.loads(config_path.read_text())
+    if evaluation.settings_from_json(config["row_settings"]) != evaluation.Settings():
+        raise IncompleteResults(f"{config_path} rows were not built with the D-08 settings")
+    if tuple(config["arms"]) != roleinfo.ARMS or config["method"] != roleinfo.METHOD:
+        raise IncompleteResults(f"{config_path} holds other arms or another preprocessing method")
+    scenes = [tuple(s) for s in config["scenes"]]
+    if scenes != eval_scene_specs(evaluation.Settings().num_scenes):
+        raise IncompleteResults(f"{config_path} lists other scenes than eval_scene_specs")
+    if not (results_dir / roleinfo.SCORES_CSV).exists():
+        raise IncompleteResults(f"missing {results_dir / roleinfo.SCORES_CSV}")
+    scores = roleinfo.read_scores(results_dir)
+    sizes = evaluation.Settings().sizes
+    missing = [
+        (f, s, n, arm)
+        for f, s in scenes
+        for n in sizes
+        for arm in roleinfo.ARMS
+        if not math.isfinite(scores.get((f, s, n, arm), math.nan))
+    ]
+    if missing:
+        required = len(scenes) * len(sizes) * len(roleinfo.ARMS)
+        raise IncompleteResults(
+            f"{len(missing)} of {required} (scene, n, arm) rows missing or non-finite (first: {missing[:3]})"
+        )
+    return scenes, scores
+
+
+def print_roleinfo(args: argparse.Namespace) -> int:
+    """Story-role-preprocessed minus raw-row native TabPFN log loss at every n (D-12, D-13)."""
+    scenes, scores = _roleinfo_scores(args.results)
+    sizes = evaluation.Settings().sizes
+    primary_scenes, primary = _evaluation_scores(args.primary, sizes)
+    if primary_scenes != scenes:
+        raise IncompleteResults(f"{args.primary} scores other scenes than {args.results}")
+    native, roles = roleinfo.NATIVE, roleinfo.ROLES
+
+    def diff(sub: list[tuple[int, int]], n: int) -> np.ndarray:
+        return _per_scene(scores, sub, n, roles) - _per_scene(scores, sub, n, native)
+
+    print(
+        f"Stage 7 role information (D-12, D-13): native TabPFN-2.5 on raw rows vs rows preprocessed "
+        f"with the story's role facts; {len(scenes)} held-out scenes (families 4-5), stage 4 rows "
+        f"({evaluation.Settings().support_seeds} nested support seeds, {evaluation.Settings().query_rows} "
+        f"query rows); paired per-scene difference preprocessed - native query log loss, "
+        f"95% scene-bootstrap CI ({BOOTSTRAP_RESAMPLES} resamples)"
+    )
+    print(f"Preprocessing: {roleinfo.METHOD}")
+    head = f"{'n':>5} {'native':>8} {'preproc':>8}  {'preproc - native [95% CI]':>28}"
+    print(head)
+    cis = {}
+    for n in PRIMARY_SIZES:
+        d = diff(scenes, n)
+        cis[n] = scene_bootstrap_ci(d)
+        means = [_per_scene(scores, scenes, n, arm).mean() for arm in (native, roles)]
+        print(f"{n:>5} " + " ".join(f"{m:>8.4f}" for m in means) + f"  {_diff_cell(d):>28}")
+    zero_in_all = all(lo <= 0 <= hi for lo, hi in cis.values())
+    print(f"D-13: 95% CI includes 0 at all of n = 8, 16, 32: {'yes' if zero_in_all else 'no'}")
+
+    print("\nSecondary: every support size")
+    print(head)
+    for n in sizes:
+        means = [_per_scene(scores, scenes, n, arm).mean() for arm in (native, roles)]
+        print(f"{n:>5} " + " ".join(f"{m:>8.4f}" for m in means) + f"  {_diff_cell(diff(scenes, n)):>28}")
+
+    print("\nSecondary: preprocessed - native by held-out family [95% CI]")
+    families = {fam: [sc for sc in scenes if sc[0] == fam] for fam in HELDOUT_FAMILIES}
+    print(f"{'n':>5} " + " ".join(f"{f'family {fam} ({len(sub)} scenes)':>28}" for fam, sub in families.items()))
+    for n in sizes:
+        print(f"{n:>5} " + " ".join(f"{_diff_cell(diff(sub, n)):>28}" for sub in families.values()))
+
+    drift = max(
+        float(np.abs(_per_scene(scores, scenes, n, native) - _per_scene(primary, scenes, n, evaluation.NATIVE)).max())
+        for n in sizes
+    )
+    print(f"\nmax |native rescored here - stage 4 native arm| over {len(scenes) * len(sizes)} cells: {drift:.2e}")
+    if drift > _NATIVE_RESCORE_TOL:
+        print(f"FAIL: rows differ from stage 4 (tolerance {_NATIVE_RESCORE_TOL:g})", file=sys.stderr)
+        return 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m texttabpfn.report")
     sub = parser.add_subparsers(dest="name", required=True)
@@ -488,6 +582,10 @@ def main(argv: list[str] | None = None) -> int:
     rel.add_argument("--results", type=Path, default=reliability.RESULTS_DIR)
     rel.add_argument("--primary", type=Path, default=evaluation.RESULTS_DIR)
     rel.set_defaults(func=print_reliability)
+    rol = sub.add_parser("roleinfo", help="stage 7: role-preprocessed - native TabPFN at every n")
+    rol.add_argument("--results", type=Path, default=roleinfo.RESULTS_DIR)
+    rol.add_argument("--primary", type=Path, default=evaluation.RESULTS_DIR)
+    rol.set_defaults(func=print_roleinfo)
     args = parser.parse_args(argv)
     try:
         status = args.func(args)

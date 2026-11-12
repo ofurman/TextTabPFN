@@ -1,4 +1,4 @@
-# 13 Ten-thousand-step role-token evaluation (implementer omp/task, high; box: the evaluation part, 1.5 h, stop by STOPBY)
+# 13 Ten-thousand-step role-token evaluation (implementer omp/task, high; box: the evaluation part, 1.5 h, stop by 2026-11-12T04:40Z)
 
 Repo: /Users/ofurman/pwr/texttabpfn, branch `thinking-rows`. Read `docs/plans/text-conditioned-thinking-rows/index.md`, `decisions.md` (D-08, D-11, D-14, D-15), the stage card `stages/13-ten-thousand-step-role-token-training.md`, and `reports/08-implement.md` and `reports/09-implement.md`.
 
@@ -25,7 +25,10 @@ Reports read committed small CSV/JSON under `results/13-role-eval-10k/` (and `re
 
 ## Facts
 
-- STAGE13FACTS
+- 10k training (commit 81c0182) finished at 2026-11-12T03:01Z after 7.50 h, with 80,000 episodes per arm.
+  - Selected on dev: story at step 9500 (mean 0.4334), control at step 6500 (mean 0.4364). Weights are in `results/13-role-training-10k/weights/` (local, gitignored).
+  - Dev n = 8 at the selected steps: story 0.5408, control 0.5477, native 0.5634.
+  - At 4000 steps, partway through the 10k schedule, the arms were tied on dev (0.5536 vs 0.5526), because the lr was still high.
 - Stage 9 (4000 steps): story − control −0.0042 / −0.0042 / −0.0041 at n = 8 / 16 / 32, verdict supported (`report role-primary`).
 - The stage-9 evaluation took about 27 min for 2 arms × 8 n plus corruptions, while the 10k training ran on the same MPS device. This evaluation runs alone.
 

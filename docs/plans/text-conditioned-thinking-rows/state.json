@@ -206,7 +206,9 @@
       "depends": [
         8
       ],
-      "commit": null,
+      "commit": [
+        "81c0182"
+      ],
       "note": "",
       "startedAt": "2026-11-11T19:17Z",
       "implementer": "orchestrator (launch), omp/task, high (eval)"

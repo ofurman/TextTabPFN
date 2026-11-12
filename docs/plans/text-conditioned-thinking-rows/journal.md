@@ -124,3 +124,7 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 ## 2026-11-11T19:43Z timestamp correction
 - Entries stamped 19:55Z and 20:10Z were written earlier (~19:40Z); stamps were estimates. From here, stamps come from date -u.
 - 10k run: step 275 at 1358 s (≈4.9 s/step while sharing MPS with stage 9); now alone, expected ≈2.65 s/step, ETA ≈03:15Z.
+
+## 2026-11-12T03:03Z 13 10k training done
+- 80000 episodes/arm, 7.50 h; selected story step 9500 (dev 0.4334), control 6500 (dev 0.4364); 4000-step pair was 0.4335 vs 0.4381.
+- Longer training mainly improved the control on dev. Commit 81c0182. Held-out evaluation dispatched.

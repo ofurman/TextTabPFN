@@ -150,3 +150,44 @@ def test_reports_fail_on_missing_or_non_finite_rows(tmp_path: Path, kwargs, name
 
 def test_curve_fails_when_rescored_references_differ(tmp_path: Path) -> None:
     assert _run("role-curve", _write_results(tmp_path, rescore_shift=1e-5)) == 1
+
+
+def _write_10k(out: Path, drop: tuple | None = None, nan: tuple | None = None) -> list[str]:
+    """Synthetic stage 13 two-arm results next to complete stage 9 results."""
+    stage9, _ = _write_results(out)
+    adapters, results = out / "13-train", out / "13-eval"
+    adapters.mkdir()
+    results.mkdir()
+    selected = {"story": {"step": 9500}, "control": {"step": 6500}}
+    (adapters / "summary.json").write_text(json.dumps({"selected": selected}))
+    (results / role_eval.CONFIG_JSON).write_text(json.dumps(role_eval._config_core(adapters, full=False)))
+    rng = np.random.default_rng(1)
+    with (results / role_eval.SCORES_CSV).open("w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(evaluation.SCORE_FIELDS)
+        for f, s in SCENES:
+            for n, label in sorted(role_eval.required_rows(full=False)):
+                if (f, s, n, label) != drop:
+                    v = "nan" if (f, s, n, label) == nan else f"{rng.uniform(0.2, 0.7):.6f}"
+                    w.writerow([f, s, n, label, v])
+    return ["role10k-primary", "--results", str(results), "--adapters", str(adapters), "--stage9", stage9[1]]
+
+
+def test_two_arm_run_needs_no_corruptions_or_preproc() -> None:
+    rows = role_eval.required_rows(full=False)
+    assert {label for _, label in rows} == {role_eval.STORY, role_eval.CONTROL}
+    assert {n for n, _ in rows} == set(SIZES)
+
+
+def test_role10k_primary_passes_on_complete_results(tmp_path: Path, capsys) -> None:
+    assert report.main(_write_10k(tmp_path)) == 0
+    out = capsys.readouterr().out
+    assert "D-08 verdict: " in out and "story 10k - story 4k" in out
+    assert all(f"\n{n:>5} " in out for n in SIZES)
+
+
+@pytest.mark.parametrize(
+    "kwargs", [{"drop": (4, 2_000_000, 32, role_eval.CONTROL)}, {"nan": (5, 2_000_001, 8, role_eval.STORY)}]
+)
+def test_role10k_primary_fails_on_missing_or_non_finite_rows(tmp_path: Path, kwargs) -> None:
+    assert report.main(_write_10k(tmp_path, **kwargs)) == 1

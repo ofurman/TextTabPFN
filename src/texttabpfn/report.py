@@ -573,22 +573,25 @@ _REFERENCE_RESCORE_TOL = 1e-6
 
 
 def _role_eval_scores(
-    results_dir: Path,
+    results_dir: Path, adapters_dir: Path = role_training.RESULTS_DIR, full: bool = True
 ) -> tuple[list[tuple[int, int]], dict[tuple[int, int, int, str], float]]:
-    """Scenes and scores; raises unless the design matches and every required row is finite."""
+    """Scenes and scores; raises unless the design matches and every required row is finite.
+
+    ``full=False`` reads a two-arm run (stage 13) of the adapters in ``adapters_dir``.
+    """
     config_path = results_dir / role_eval.CONFIG_JSON
     if not config_path.exists():
         raise IncompleteResults(f"missing {config_path}")
     config = json.loads(config_path.read_text())
-    core = role_eval._config_core()
+    core = role_eval._config_core(adapters_dir, full)
     other = sorted(k for k in core if config.get(k) != core[k])
     if other:
-        raise IncompleteResults(f"{config_path} differs from the stage 9 design in {other}")
+        raise IncompleteResults(f"{config_path} differs from the expected design in {other}")
     scenes = [tuple(s) for s in config["scenes"]]
     if not (results_dir / role_eval.SCORES_CSV).exists():
         raise IncompleteResults(f"missing {results_dir / role_eval.SCORES_CSV}")
     scores = role_eval.read_scores(results_dir)
-    need = sorted(role_eval.required_rows())
+    need = sorted(role_eval.required_rows(full))
     missing = [
         (f, s, n, label)
         for f, s in scenes
@@ -658,6 +661,50 @@ def print_role_primary(args: argparse.Namespace) -> int:
     print(f"{'n':>5} " + " ".join(f"{f'family {fam} ({len(sub)} scenes)':>28}" for fam, sub in families.items()))
     for n in PRIMARY_SIZES:
         print(f"{n:>5} " + " ".join(f"{_diff_cell(diff(sub, n)):>28}" for sub in families.values()))
+    return 0
+
+
+def print_role10k_primary(args: argparse.Namespace) -> int:
+    """10k-step role-token story minus 10k control at n = 8, 16, 32 and the D-08 verdict;
+    secondary: per family, every n, and each 10k arm minus its 4000-step (stage 9) arm."""
+    scenes, scores = _role_eval_scores(args.results, args.adapters, full=False)
+    s9_scenes, s9 = _role_eval_scores(args.stage9)
+    if s9_scenes != scenes:
+        raise IncompleteResults(f"{args.stage9} scores other scenes than {args.results}")
+    story, control = role_eval.STORY, role_eval.CONTROL
+    steps = json.loads((args.results / role_eval.CONFIG_JSON).read_text())["adapters"]
+
+    def diff(sub: list[tuple[int, int]], n: int) -> np.ndarray:
+        return _per_scene(scores, sub, n, story) - _per_scene(scores, sub, n, control)
+
+    print(
+        f"Stage 13 role10k-primary (D-08): 10k-step role-token adapters (story step "
+        f"{steps[story]['step']}, control step {steps[control]['step']}), {len(scenes)} held-out scenes "
+        f"(families 4-5), stage 4 rows; paired per-scene difference 10k story - 10k control "
+        f"query log loss, 95% scene-bootstrap CI ({BOOTSTRAP_RESAMPLES} resamples)"
+    )
+    print(f"{'n':>5} {'control':>8} {'story':>8}  {'story - control [95% CI]':>28}")
+    cis = {}
+    for n in PRIMARY_SIZES:
+        d = diff(scenes, n)
+        cis[n] = scene_bootstrap_ci(d)
+        means = [_per_scene(scores, scenes, n, arm).mean() for arm in (control, story)]
+        print(f"{n:>5} " + " ".join(f"{m:>8.4f}" for m in means) + f"  {_diff_cell(d):>28}")
+    print(f"D-08 verdict: {d08_verdict(cis)}")
+    print("\nSecondary: 10k story - 10k control by held-out family [95% CI]")
+    families = {fam: [sc for sc in scenes if sc[0] == fam] for fam in HELDOUT_FAMILIES}
+    print(f"{'n':>5} " + " ".join(f"{f'family {fam} ({len(sub)} scenes)':>28}" for fam, sub in families.items()))
+    for n in PRIMARY_SIZES:
+        print(f"{n:>5} " + " ".join(f"{_diff_cell(diff(sub, n)):>28}" for sub in families.values()))
+    print("\nSecondary: every n; 10k minus 4000-step (stage 9) arm on the same rows [95% CI]")
+    print(
+        f"{'n':>5} {'story - control':>28} {'story 10k - story 4k':>28} {'control 10k - control 4k':>28}"
+    )
+    for n in evaluation.Settings().sizes:
+        cells = [diff(scenes, n)] + [
+            _per_scene(scores, scenes, n, arm) - _per_scene(s9, scenes, n, arm) for arm in (story, control)
+        ]
+        print(f"{n:>5} " + " ".join(f"{_diff_cell(c):>28}" for c in cells))
     return 0
 
 
@@ -768,6 +815,11 @@ def main(argv: list[str] | None = None) -> int:
     rpr = sub.add_parser("role-primary", help="stage 9: role-token story - control at n = 8, 16, 32, D-08 verdict")
     rpr.add_argument("--results", type=Path, default=role_eval.RESULTS_DIR)
     rpr.set_defaults(func=print_role_primary)
+    r10 = sub.add_parser("role10k-primary", help="stage 13: 10k-step role-token story - control, D-08 verdict")
+    r10.add_argument("--results", type=Path, default=Path("results/13-role-eval-10k"))
+    r10.add_argument("--adapters", type=Path, default=Path("results/13-role-training-10k"))
+    r10.add_argument("--stage9", type=Path, default=role_eval.RESULTS_DIR)
+    r10.set_defaults(func=print_role10k_primary)
     rcu = sub.add_parser("role-curve", help="stage 9: role-token arms vs control and references at every n")
     rcu.add_argument("--results", type=Path, default=role_eval.RESULTS_DIR)
     rcu.add_argument("--primary", type=Path, default=evaluation.RESULTS_DIR)

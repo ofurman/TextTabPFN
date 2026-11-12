@@ -71,6 +71,7 @@ SCORE_FIELDS = evaluation.SCORE_FIELDS
 NATIVE = evaluation.NATIVE
 STORY, CONTROL, PREPROC_SUPPORT = "role_story", "role_control", "preproc_support"
 ARMS = (STORY, CONTROL, PREPROC_SUPPORT)
+ROLE_ARMS = (STORY, CONTROL)
 # The stage 8 adapter behind each role-token arm.
 ADAPTER = {STORY: "story", CONTROL: "control"}
 CORRUPTIONS = ("omitted", "irrelevant", "wrong")
@@ -123,15 +124,29 @@ def scene_sentences(family: int, seed: int) -> dict[str, list[str]]:
     return out
 
 
-def required_rows() -> set[tuple[int, str]]:
-    """Every ``(n, label)`` row one scene needs in ``scores.csv``."""
-    need = {(n, arm) for n in evaluation.Settings().sizes for arm in ARMS}
+def required_rows(full: bool = True) -> set[tuple[int, str]]:
+    """Every ``(n, label)`` row one scene needs in ``scores.csv``.
+
+    ``full=False`` (stage 13) scores only the two role-token arms: no corruptions, no preproc-s.
+    """
+    arms = ARMS if full else ROLE_ARMS
+    need = {(n, arm) for n in evaluation.Settings().sizes for arm in arms}
+    if not full:
+        return need
     return need | {(n, corrupted_label(c)) for n in RELIABILITY_SIZES for c in CORRUPTIONS}
 
 
-def _config_core() -> dict:
+def _config_core(adapters_dir: Path = role_training.RESULTS_DIR, full: bool = True) -> dict:
     rows = evaluation.Settings()
-    stage8 = json.loads((role_training.RESULTS_DIR / training.SUMMARY_JSON).read_text())["selected"]
+    stage8 = json.loads((adapters_dir / training.SUMMARY_JSON).read_text())["selected"]
+    if not full:
+        return {
+            "row_settings": evaluation._settings_json(rows),
+            "arms": list(ROLE_ARMS),
+            "adapters_dir": str(adapters_dir),
+            "adapters": {arm: {"stage8_arm": a, "step": stage8[a]["step"]} for arm, a in ADAPTER.items()},
+            "scenes": [list(s) for s in eval_scene_specs(rows.num_scenes)],
+        }
     return {
         "row_settings": evaluation._settings_json(rows),
         "arms": list(ARMS),
@@ -170,12 +185,14 @@ def _progress(t_start: float, i: int, done: int, total: int, todo: int, label: s
     )
 
 
-def run(out_dir: Path, chunk: int) -> None:
+def run(out_dir: Path, chunk: int, adapters_dir: Path = role_training.RESULTS_DIR, full: bool = True) -> None:
+    """Score the role-token arms. ``full=False`` skips the reference re-score, preproc-s and
+    the corruptions, and scores only the two adapters from ``adapters_dir``."""
     out_dir.mkdir(parents=True, exist_ok=True)
     config_path = out_dir / CONFIG_JSON
     device = default_device()
     rows_settings = evaluation.Settings()
-    core = _config_core()
+    core = _config_core(adapters_dir, full)
     specs = eval_scene_specs(rows_settings.num_scenes)
     if config_path.exists():
         saved = json.loads(config_path.read_text())
@@ -190,11 +207,11 @@ def run(out_dir: Path, chunk: int) -> None:
         config_path.write_text(json.dumps(config, indent=2) + "\n")
 
     sentences = {spec: scene_sentences(*spec) for spec in specs}  # refuses equal corruptions up front
-    sample = specs[:RESCORE_SCENES]
+    sample = specs[:RESCORE_SCENES] if full else []
     need_ref = {(n, arm) for n in rows_settings.sizes for arm in REFERENCE_ARMS}
     ref_done = evaluation.keep_complete_scenes(out_dir / RESCORE_CSV, SCORE_FIELDS, need_ref)
     ref_todo = [s for s in sample if s not in ref_done]
-    done = evaluation.keep_complete_scenes(out_dir / SCORES_CSV, SCORE_FIELDS, required_rows())
+    done = evaluation.keep_complete_scenes(out_dir / SCORES_CSV, SCORE_FIELDS, required_rows(full))
     todo = [s for s in specs if s not in done]
     print(
         f"rescore sample: {len(ref_done)} of {len(sample)} done; scores: {len(done)} of "
@@ -233,7 +250,7 @@ def run(out_dir: Path, chunk: int) -> None:
         del it1
 
     if todo:
-        adapters = {arm: role_training.load_adapter(model, a) for arm, a in ADAPTER.items()}
+        adapters = {arm: role_training.load_adapter(model, a, out_dir=adapters_dir) for arm, a in ADAPTER.items()}
         t_start = time.time()
         for i, (family, seed) in enumerate(todo, 1):
             t0 = time.time()
@@ -244,7 +261,7 @@ def run(out_dir: Path, chunk: int) -> None:
             for n in rows_settings.sizes:
                 episode = tuple(torch.as_tensor(a, device=device) for a in se.arrays[n])
                 labels = [(STORY, STORY), (CONTROL, CONTROL)]
-                if n in RELIABILITY_SIZES:
+                if full and n in RELIABILITY_SIZES:
                     labels += [(corrupted_label(c), STORY) for c in CORRUPTIONS]
                 for label, arm in labels:
                     loss = evaluation.query_logloss(
@@ -253,6 +270,8 @@ def run(out_dir: Path, chunk: int) -> None:
                         chunk,
                     )
                     rows.append([family, seed, n, label, f"{loss:.6f}"])
+                if not full:
+                    continue
                 # The whole query batch enters the preprocessing before any chunking.
                 pre = roleinfo.preprocess_episode(roles, se.arrays[n], fit=roleinfo.FIT_SUPPORT)
                 pre_episode = tuple(torch.as_tensor(a, device=device) for a in pre)
@@ -265,7 +284,7 @@ def run(out_dir: Path, chunk: int) -> None:
     missing = [
         (f, s, n, label)
         for f, s in specs
-        for n, label in sorted(required_rows())
+        for n, label in sorted(required_rows(full))
         if not math.isfinite(scores.get((f, s, n, label), math.nan))
     ]
     if missing:
@@ -273,7 +292,7 @@ def run(out_dir: Path, chunk: int) -> None:
     summary = {
         "scenes": len(specs),
         "rows": len(scores),
-        "rescore_rows": len(read_scores(out_dir, RESCORE_CSV)),
+        "rescore_rows": len(read_scores(out_dir, RESCORE_CSV)) if full else 0,
         "finished_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     (out_dir / SUMMARY_JSON).write_text(json.dumps(summary, indent=2) + "\n")
@@ -284,8 +303,14 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", type=Path, default=RESULTS_DIR)
     parser.add_argument("--chunk", type=int, default=5, help="support seeds per forward pass")
+    parser.add_argument(
+        "--adapters", type=Path, default=role_training.RESULTS_DIR, help="role-token training dir"
+    )
+    parser.add_argument(
+        "--arms-only", action="store_true", help="score only the two adapters (no corruptions, preproc-s)"
+    )
     args = parser.parse_args(argv)
-    run(args.out, args.chunk)
+    run(args.out, args.chunk, args.adapters, full=not args.arms_only)
 
 
 if __name__ == "__main__":

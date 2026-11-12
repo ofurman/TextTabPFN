@@ -5,8 +5,8 @@ topic: "Text-tabular attention: injecting a shared task story into TabPFN-style 
 tags: ["tabpfn", "tabpfn-2.5", "contexttab", "task-context", "architecture", "cross-attention"]
 sources: ["primary-papers", "author-code"]
 status: complete
-last_updated: "2026-11-04"
-last_updated_note: "Added stress test, kill tests, simple LLM-mask baseline, frozen-backbone options and verified implementation details"
+last_updated: "2026-11-10"
+last_updated_note: "Added two-stage structure interface (design S), column reordering, oracle-edit K1, ensemble path and evaluation protocol"
 ---
 
 # Research: Text-tabular attention for TabPFN
@@ -19,15 +19,17 @@ Follow-up questions in the same session: how the thinking rows work, what to do 
 
 ## Summary
 
-A text-tabular interface is technically easy to build into TabPFN-2.5. The most natural channel is its 64 learned **thinking rows**: condition them on the story through cross-attention, per feature group. The data cells then read the story through the native row attention. A zero-initialized residual gives the native predictions at initialization. The cost does not grow with the number of rows. The backbone can stay frozen; only about 0.22M adapter parameters are trained across scenes.
+A text-tabular interface is technically easy to build into TabPFN-2.5. Its 64 learned **thinking rows** are a natural channel: condition them on the story through cross-attention, per feature group, and the data cells read the story through the native row attention. A zero-initialized residual gives the native predictions at initialization. The cost does not grow with the number of rows. The backbone can stay frozen; only about 0.22M adapter parameters are trained across scenes.
 
-The stress test below weakens the case for this design:
+The stress test below weakens the case for feeding raw text into this channel:
 
 - The main risk is **too little information in the stories**, not the attention block. With randomly sampled mechanisms, a story communicates structure (which features are relevant or redundant), not signs or effect sizes.
 - Input-only conditioning of a small frozen model may be **too narrow a channel**. Test rows read the thinking rows through one K/V head only.
 - A training-free **LLM relevance mask** in front of unchanged TabPFN-2.5 may capture most of the benefit. The learned adapter must beat that baseline, not only native TabPFN.
 
-Run three cheap kill tests (K1–K3) before training any adapter. Treat the thinking rows as the first channel to *measure*, not a committed architecture. The research contribution is the empirical answer to H1–H4; text-to-soft-prompt conditioning is a standard mechanism.
+If the usable content of a story is graph facts, the natural intermediate is an explicit graph, not sentence embeddings. The plan therefore splits the problem in two ([design S](#s-two-stage-structure-interface--first-learned-design)): a **structure-conditioned TabPFN**, trained on synthetic graphs without text, and an **LLM that extracts the graph facts from the story**, scored directly against the hidden SCM. This separates "can TabPFN use structure?" from "was the story read correctly?". Raw-text conditioning of the thinking rows (design B) becomes the ablation that asks whether text carries anything the extracted graph does not.
+
+Run three cheap kill tests (K1–K3) before training any model. K1 is the oracle version of the training-free baseline, so K3/K1 is the fraction of the oracle gain that the baseline recovers. The research contribution is the empirical answer to H1–H4; text-to-soft-prompt conditioning and graph-conditioned attention are standard mechanisms.
 
 ## What the four papers give us
 
@@ -58,11 +60,35 @@ All designs keep the language model frozen. Use T for the contextual token state
 
 An LLM reads the story and schema and returns, per feature: relevant, redundant (with which features), or irrelevant. Drop irrelevant features, average redundant measurements, then run unchanged TabPFN-2.5 with its normal ensembling. A schema-only prompt with the same budget is the control. This is close to [CAAFE](../../related_works/2023-caafe.md), restricted to structural edits. It needs no training, and it is the number every learned design must beat.
 
+A second training-free variant only **reorders columns**. TabPFN-2.5 groups the remaining columns consecutively in threes, so the column order decides which features share a token. Put redundant measurements of the same quantity in one group and irrelevant features together, then run unchanged TabPFN-2.5. Nothing is removed, so a wrong story costs less than a wrong drop. Whether the frozen model benefits from this grouping is untested. The schema-only control applies the same reordering rule to the schema-only LLM output. Report it for the raw path; the wrapper's ensemble shuffles change the order.
+
+### S. Two-stage structure interface — first learned design
+
+By the stress test's own argument, a story about randomly sampled mechanisms mainly communicates graph facts. Make those facts the interface:
+
+1. **Structure → TabPFN.** Give each feature j a fact code r_j from a fixed vocabulary: parent, child or spouse of the target, measurement of latent k, irrelevant, or unknown. Add fact types such as signs or monotonicity only if the stories reveal them. Feed the codes into the channel that K2 favours: the thinking rows (design B with fact-code tokens as keys and values instead of the text tokens T), the feature-attention bias of design D (b_{gh} from the codes of groups g and h), or both. Within a group of three, use a slot-aware code e_g = Σ_k P_k r_{g,k} with learned slot embeddings P_k, so "ignore X2, keep X1 and X3" has its own representation (stress-test risk 3). Zero-initialize the output layer for parity. Train across synthetic SCMs with their true graphs; no verbalization is needed. For H4, corrupt the graph instead of the text: hide a fixed fraction of facts as unknown and set a fixed fraction to wrong values.
+2. **Text → structure.** An LLM reads the story and the schema and returns the same fact codes, with unknown allowed. Score precision and recall against two references: the facts the story actually reveals (reading accuracy) and the true graph (what the information contract permits). The schema-only control runs the same prompt without the story.
+
+At evaluation, chain the stages: story → extracted codes → stage-1 model. Compare it with the stage-1 model on oracle codes (the upper limit of this interface), on schema-only codes (the control), and with design 0 (K3).
+
+What it does well:
+
+- Clean attribution: extraction errors and failures to use structure are measured separately.
+- Stage 1 trains on cheap synthetic episodes with exact labels for every fact. Transfer from template stories to LLM-written stories is no longer a training problem; stage 2 needs no training.
+- The limits of a frozen sentence encoder (truncation, weak role binding) no longer bound the interface. The extraction LLM can be replaced without retraining stage 1.
+- The corruption rate is an explicit, reportable prior on story reliability (stress-test claim 3).
+
+Its limits:
+
+- Information outside the fact vocabulary is lost. Design B measures whether raw text adds any.
+- Extraction errors have a different distribution from synthetic corruption. Fix the corruption rate in advance, measure the extraction error on held-out scenes, and report both. Do not tune the rate on evaluation scenes.
+- The conditioning mechanism is close to structure-aware tabular models such as [Use What You Know](../../related_works/2026-use-what-you-know.md). The new part is the measured path from story to structure and its comparison with raw text.
+
 ### A. Semantic column embeddings (ConTextTab-style)
 
 Replace or add to the random column embedding: e_g = e_g^rand + W s_g, with W initialized to zero. The story goes into s_g ("story + description of group g"). It is cheap and directly comparable with ConTextTab, but gives one pooled vector per column. The frozen backbone learned these embeddings as *identifiers*, not meanings. This is close to the FiLM adapter of the [2026-10-21 proposal](2026-10-21-first-context-tabpfn-experiment.md#recommended-first-learned-architecture).
 
-### B. Story-conditioned thinking rows — first learned channel to measure
+### B. Story-conditioned thinking rows — raw-text ablation
 
 For thinking row t and column g (feature groups and the target column):
 
@@ -93,7 +119,7 @@ What it does well:
 - Cross-attention cost is 64 · C · L per scene, independent of n, and cacheable for support and query rows.
 - W_o = 0 gives the native model at initialization, which makes optimization start safely.
 
-Its limits are in the [stress test](#stress-test).
+Its limits are in the [stress test](#stress-test). In the refined plan, B is the raw-text arm: on the same channel as design S, it tests whether text carries information that the extracted fact codes miss.
 
 ### B-deep. Per-layer conditioning of the thinking rows
 
@@ -110,7 +136,7 @@ Add a text cross-attention sublayer for all cells (i, g) in some blocks. Retriev
 
 ### D. Text-derived feature-attention bias
 
-Add a bias b_{gh} = MLP(s_g, s_h, pooled story) to the feature-attention logits, with the last layer initialized to zero. This is the soft version of the graph masks in [Use What You Know](../../related_works/2026-use-what-you-know.md). It directly expresses "X1 and X2 measure the same quantity" or "X5 is unrelated", subject to the group-of-three limit below. It combines well with B.
+Add a bias b_{gh} = MLP(s_g, s_h, pooled story) to the feature-attention logits, with the last layer initialized to zero. This is the soft version of the graph masks in [Use What You Know](../../related_works/2026-use-what-you-know.md). It directly expresses "X1 and X2 measure the same quantity" or "X5 is unrelated", subject to the group-of-three limit below. It combines well with B. Design S feeds the same bias from fact codes instead of text embeddings.
 
 ### E. Late-fusion head — no gradients through TabPFN
 
@@ -133,8 +159,10 @@ Run frozen TabPFN once per episode without gradients and cache its test-row logi
 
 1. **Little information in the stories.** With randomly sampled mechanisms, a story communicates structure, not signs or effect sizes. For observational prediction, the useful structure is mostly Markov-blanket membership and redundancy; edge direction barely matters. TabPFN already does implicit feature selection. If scenes have few irrelevant features, even a perfect interface gains little.
 2. **Narrow channel in a small frozen model.** Input-only conditioning is soft prompt tuning. Input-only prompts match fine-tuning only for very large language models ([Lester et al.](https://arxiv.org/abs/2104.08691)); small models need per-layer prompts (P-Tuning v2). TabPFN-2.5 has about 11M parameters. Test rows also read the thinking rows through one 64-dim K/V head per layer and column; information can also pass through training rows, which use all 3 heads. On the positive side, [TuneTables](https://arxiv.org/abs/2402.11137) shows that learned context tokens can carry much dataset information into a frozen TabPFN. That was per-dataset optimization with labels, not amortized generation from text.
-3. **Groups of three features weaken column binding.** One token holds three features, so s_g mixes three descriptions. A statement like "ignore X2, keep X1 and X3" has no token of its own. Binding holds at group level only. One-feature groups through custom padding are possible but outside the pretraining distribution; they need an ablation.
+3. **Groups of three features weaken column binding.** One token holds three features, so s_g mixes three descriptions. A statement like "ignore X2, keep X1 and X3" has no token of its own. Binding holds at group level only. One-feature groups through custom padding are possible but outside the pretraining distribution; they need an ablation. Two cheaper mitigations: reorder columns so related features share a group (design 0), and use slot-aware codes inside each group (design S).
 4. **Gains from prior mismatch.** We do not have Prior Labs' prior generator, so our synthetic scenes differ from TabPFN's pretraining data. An adapter can lower loss by adapting to our scene distribution without using the story. The equally trained schema-only arm controls this and is required. Audit what the schema reveals: a feature description such as "second noisy reading of temperature" already contains part of the story.
+5. **Template stories favour the baselines.** On synthetic episodes with clean template facts, design 0 and the design S extraction are nearly perfect, so a learned raw-text arm can win only by handling wrong statements better. The deciding evaluation uses held-out LLM-written or CausalDS-style stories, with about 100 scenes and fewer binary targets. Fix the primary analysis in advance ([evaluation protocol](#evaluation-protocol)).
+6. **No path to the ensembled model.** The adapter runs on the raw path, but claim 1 requires beating the wrapper with ensembling. The wrapper shuffles features per ensemble member, which changes the groups, and adds SVD features that have no description. Either recompute the group inputs per member (pitfall 4) or report raw-path results only and say so.
 
 Smaller risks:
 
@@ -148,11 +176,11 @@ Smaller risks:
 
 | Test | What it measures | Decision rule |
 |---|---|---|
-| **K1. Headroom:** native TabPFN-2.5 on all features vs only the true Markov-blanket features, n = 8 … 1024 | The gain available from perfect structural knowledge | Little gap at small n → stop, or change the scenes |
-| **K2. Channel capacity:** optimize the 64 × C thinking cells *per scene* with privileged labels on a large set of extra rows; evaluate on different held-out rows. Repeat for column embeddings (design A) and per-layer thinking-row K/V (B-deep). | The upper limit of any story-to-channel mapping, for each channel | Input thinking rows far below the K1 gap, but B-deep close → build B-deep instead of B |
-| **K3. Simple baseline:** design 0 (LLM relevance mask) vs its schema-only control | What a training-free story pipeline achieves | The learned adapter must beat this number |
+| **K1. Headroom:** native TabPFN-2.5 on all features vs the **oracle version of design 0**: drop features outside the true Markov blanket and average redundant measurements of the same latent. Report each edit alone and the oracle column reordering. n = 8 … 1024 | The gain available from perfect structural knowledge through the edits that design 0 makes | Little gap at small n → stop, or change the scene generator under the [evaluation protocol](#evaluation-protocol) rule |
+| **K2. Channel capacity:** optimize the 64 × C thinking cells *per scene* with privileged labels on a large set of extra rows; evaluate on different held-out rows. Repeat for column embeddings (design A), per-layer thinking-row K/V (B-deep) and the feature-attention bias (design D). | The upper limit of any story-to-channel mapping, for each channel | Input thinking rows far below the K1 gap, but B-deep or the bias close → feed designs S and B through that channel |
+| **K3. Simple baseline:** design 0 (relevance mask and column reordering) vs its schema-only control; score the LLM's labels against the true graph | What a training-free story pipeline achieves, and how accurately the LLM reads structure (stage 2 of design S) | K3/K1 is the oracle gain recovered without training; every learned design must beat K3 |
 
-K1 and K3 need no training. K2 needs a few gradient runs per scene; its privileged labels are a diagnostic only and must never enter a reported method. All three need the gated TabPFN-2.5 checkpoint (the user accepts its license) and scenes with binary targets.
+K1 and K3 need no training. K2 needs a few gradient runs per scene; its privileged labels are a diagnostic only and must never enter a reported method. All three need the gated TabPFN-2.5 checkpoint (the user accepts its license) and scenes with binary targets. K1 covers hard edits only. A learned channel can in principle exceed it through soft trust or partial redundancy, so K1 is a stopping rule, not an upper bound.
 
 ## Training data
 
@@ -164,6 +192,17 @@ TabPFN learned p(y | x, D) under a synthetic SCM prior. We want p(y | x, D, c) =
 4. Paraphrase a subset with an LLM, so the model does not learn only the template syntax. Keep LLM-written CausalDS-style stories for held-out evaluation.
 
 Use episodic training with support rows as context and the loss on disjoint query rows. Mix support sizes and include episodes without a story. Keep the controls of the [2026-10-21 protocol](2026-10-21-first-context-tabpfn-experiment.md#first-experiment-and-controls): a schema-only arm with the same architecture and budget; omitted, irrelevant and wrong stories; paired scene-level log-loss curves over n.
+
+Design S stage 1 needs only steps 1 and 3, applied to the graph instead of the text: sample the SCM, encode its true facts, then hide and corrupt them at the fixed rates. Verbalization and paraphrases (steps 2 and 4) serve design B and the held-out stage-2 evaluation.
+
+## Evaluation protocol
+
+Fix these before running any method arm:
+
+- **Primary test:** per-scene paired log-loss difference (story minus schema-only) at n = 8, 16, 32, averaged by scene, with scene-level bootstrap confidence intervals. Both arms use the same support and query rows.
+- **Secondary:** full paired curves over n = 8 … 1024, the labels needed to reach a fixed log loss (H2), and the tail of per-scene harm under omitted, irrelevant and wrong stories (H4).
+- **Scene selection:** choosing a generator by K1 headroom uses only the oracle, not any method, so it is allowed if decided and reported before the method arms run. Also report results on the unselected generator distribution. Never select scenes or generators on method results.
+- **Held-out stories:** headline numbers use LLM-written or CausalDS-style stories that no trained component saw.
 
 ## Implementation notes for design B
 
@@ -183,7 +222,7 @@ Use episodic training with support rows as context and the loss on disjoint quer
 1. Set `save_peak_memory_factor=None`; use `force_recompute_layer=True` for checkpointing.
 2. Compute s_g **after** the constant-column mask. With n = 8, a binary feature is often constant, and all later groups shift.
 3. The thinking-row tensor is shared across the batch. Start with one scene per forward (B = 1).
-4. The raw module skips the wrapper's ensemble preprocessing (quantile transforms, SVD features, shuffles). The native baseline and the adapter arm must use the same raw path; report wrapper results separately.
+4. The raw module skips the wrapper's ensemble preprocessing (quantile transforms, SVD features, shuffles). The native baseline and the adapter arm must use the same raw path; report wrapper results separately. To compete with the ensembled model, run the adapter inside each ensemble member: recompute the groups and their s_g or fact codes after the member's feature shuffle, give SVD and other derived features a shared learned "no description" input trained with the same preprocessing, and average members as the wrapper does.
 
 **Sketch (not run).**
 
@@ -226,6 +265,8 @@ class StoryThinkingRows(nn.Module):
 
 Install it with `model.add_thinking_rows = StoryThinkingRows(model.add_thinking_rows)`. Call `model.requires_grad_(False)`, then enable gradients for the adapter only.
 
+Design S reuses this module with fact-code tokens in place of `text_LD` and slot-aware group codes in place of `cols_CD`. Pitfalls 1–4 apply unchanged.
+
 **Checks before training.**
 
 1. Parity: with W_o = 0, outputs equal the unpatched model's, apart from the dtype cast.
@@ -235,11 +276,13 @@ Install it with `model.add_thinking_rows = StoryThinkingRows(model.add_thinking_
 
 ## Recommended order
 
-1. K1 headroom and K3 simple baseline (no training).
-2. K2 channel capacity for input thinking rows, column embeddings and per-layer thinking-row K/V.
-3. Text-conditioned synthetic prior generator (templates, fixed wrong-statement rate, LLM paraphrases).
-4. The learned channel that K2 favours (B or B-deep), with its schema-only twin, design A and design E as controls. Compare against the K3 baseline.
-5. D, LoRA, or design C only after a clear signal.
+1. K1 headroom (oracle design 0 and reordering) and K3 simple baseline with extraction accuracy (no training).
+2. K2 channel capacity for input thinking rows, column embeddings, per-layer thinking-row K/V and the feature-attention bias.
+3. Synthetic episode generator: SCMs with true graphs and fixed hide/corrupt rates for design S; template verbalization and LLM paraphrases for design B and held-out stories.
+4. Design S stage 1 on oracle graphs, in the channel K2 favours. Compare it with the K1 oracle edits, then train with corrupted graphs for H4.
+5. Design S end to end: story → LLM fact codes → stage-1 model, against oracle codes, schema-only codes and K3.
+6. Design B on the same channel with its schema-only twin, as the raw-text ablation; designs A and E as controls.
+7. LoRA, text-fed design D or design C only after a clear signal.
 
 ## Model choice
 
@@ -247,7 +290,7 @@ Use **TabPFN-2.5** because of the thinking rows. With TabPFN v2 (no thinking row
 
 ## Confidence Notes
 
-These designs are our proposals; no model was built, trained or evaluated. Facts about TabPFN-2.5 come from the [technical report](https://arxiv.org/abs/2511.08667) (v2) and the current `main` source; the checkpoint config was not loaded. Parameter and memory numbers are estimates from the default config. The report's architecture section gives the motivation for thinking rows but no ablation was found there. I did not search systematically for text-conditioned register or thinking tokens in tabular PFNs, so no novelty claim is made. TabPFN-2.5 and TuneTables are not yet records in the [related-works catalogue](../../related_works/README.md).
+These designs are our proposals; no model was built, trained or evaluated. Design S, the column-reordering variant and the evaluation protocol were added on 2026-11-10 and are equally untested. Facts about TabPFN-2.5 come from the [technical report](https://arxiv.org/abs/2511.08667) (v2) and the current `main` source; the checkpoint config was not loaded. Parameter and memory numbers are estimates from the default config. The report's architecture section gives the motivation for thinking rows but no ablation was found there. I did not search systematically for text-conditioned register or thinking tokens in tabular PFNs, so no novelty claim is made. TabPFN-2.5 and TuneTables are not yet records in the [related-works catalogue](../../related_works/README.md).
 
 ## Open Questions
 
@@ -256,3 +299,6 @@ These designs are our proposals; no model was built, trained or evaluated. Facts
 - How much of the K1 gap does a training-free LLM relevance mask recover (K3)?
 - Does a small frozen sentence encoder keep relational statements, or do we need the hidden states of a decoder LLM?
 - Do models trained on template stories transfer to LLM-written stories?
+- How accurately does an LLM extract graph facts from CausalDS-style stories, and which fact types does it miss?
+- Does raw text (design B) add information beyond the extracted fact codes (design S)?
+- Does story-guided column reordering help frozen TabPFN-2.5 at all?

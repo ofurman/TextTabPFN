@@ -162,29 +162,33 @@
     {
       "id": 10,
       "title": "Follow-on arm training",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "box": 6,
       "review": false,
       "depends": [
         9,
         13
       ],
-      "commit": null,
-      "note": "",
+      "commit": [
+        "b583d2c"
+      ],
+      "note": "bge 5.0M params; dev story 0.4377 = control 0.4377; same-p cosine 0.9936",
       "startedAt": "2026-11-12T03:19Z",
       "implementer": "omp/task, high"
     },
     {
       "id": 11,
       "title": "Follow-on held-out evaluation",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "box": 2,
       "review": true,
       "depends": [
         10
       ],
       "commit": null,
-      "note": ""
+      "note": "",
+      "startedAt": "2026-11-12T06:39Z",
+      "implementer": "omp/task, high"
     },
     {
       "id": 12,

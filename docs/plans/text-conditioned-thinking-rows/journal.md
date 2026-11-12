@@ -136,3 +136,11 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 
 ## 2026-11-12T03:18Z D-14 applied
 - Input per D-15: role10k-primary verdict "supported" -> B-09 (bge-base-en-v1.5 pooled stories vs schema control). B-01 stays in backlog. Budget and size: D-16.
+
+## 2026-11-12T06:39Z 10 bge follow-on training: DONE
+- `uv run pytest tests_exp/test_followon.py` -> 18 passed; `report followon-training` -> exit 0, 32000 episodes each. Commit b583d2c.
+- Dev: story 0.4377 = control 0.4377 (both step 3000); bge same-p story cosine 0.9936 vs MiniLM 0.9886.
+- Test used W scale 0.5 (bge text differences too small at 0.05); not a weakened check.
+
+## 2026-11-12T06:39Z 10 re-plan
+- Keep 11 and 12. Stage 11 brief notes the expected held-out null. Cut nothing.

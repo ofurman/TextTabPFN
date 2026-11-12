@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-from texttabpfn import evaluation, reliability, role_eval, role_training, roleinfo, training
+from texttabpfn import evaluation, followon, reliability, role_eval, role_training, roleinfo, training
 from texttabpfn.capacity import ARMS, CONFIG_JSON, RESULTS_DIR, SUPPORT_SIZES, Settings, arm_csv
 from texttabpfn.scenes import HELDOUT_FAMILIES, eval_scene_specs
 
@@ -268,6 +268,24 @@ def print_training_validation(args: argparse.Namespace) -> int:
     for arm, (step, v) in selected.items():
         print(f"selected {arm}: step {step}, mean dev log loss {v:.4f}")
     return 0
+
+
+def print_followon_training(args: argparse.Namespace) -> int:
+    """Stage 10: the B-09 arm's encoder and size facts, then ``print_training``."""
+    config, _ = _training_config(args.results)
+    enc = config["encoder"]
+    tokens, cos = enc["sample_tokens"], enc["dev_story_cosines"]
+    print(
+        f"Stage 10 follow-on: {enc['name']} (CLS, L2-normalised), theta + W P e(t), "
+        f"{config['trainable_parameters']:,} trainable parameters per arm"
+    )
+    print(
+        f"bge tokens over {tokens['scenes']} sample scenes: max schema+story {tokens['max_story']}, "
+        f"max any text {tokens['max_any']} (limit {followon.MAX_TOKENS}); "
+        f"{cos['scenes']} dev stories: cos mean {cos['cos_mean']:.4f}, same-p {cos['cos_same_p']:.4f}, "
+        f"residual norm {cos['residual_norm']:.4f}"
+    )
+    return print_training(args)
 
 
 # --- Stage 4: primary evaluation ------------------------------------------------
@@ -798,6 +816,10 @@ def main(argv: list[str] | None = None) -> int:
     rtr.add_argument("--validation", action="store_true", help="dev log loss per checkpoint")
     rtr.add_argument("--results", type=Path, default=role_training.RESULTS_DIR)
     rtr.set_defaults(func=print_training, arms=role_training.ARMS, label="Stage 8 role-token")
+    fot = sub.add_parser("followon-training", help="stage 10: bge follow-on episodes per arm and dev validation")
+    fot.add_argument("--validation", action="store_true", help="dev log loss per checkpoint")
+    fot.add_argument("--results", type=Path, default=followon.RESULTS_DIR)
+    fot.set_defaults(func=print_followon_training, arms=followon.ARMS, label="Stage 10 follow-on")
     pri = sub.add_parser("primary", help="stage 4: story - schema-only at n = 8, 16, 32, D-08 verdict")
     pri.add_argument("--results", type=Path, default=evaluation.RESULTS_DIR)
     pri.set_defaults(func=print_primary)

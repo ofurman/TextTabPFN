@@ -1,0 +1,19 @@
+{
+  "steps": 4000,
+  "episodes": {
+    "story": 32000,
+    "control": 32000
+  },
+  "train_wall_s": 10847.7,
+  "selected": {
+    "story": {
+      "step": 3000,
+      "val_logloss_mean": 0.437749
+    },
+    "control": {
+      "step": 3000,
+      "val_logloss_mean": 0.437701
+    }
+  },
+  "finished_utc": "2026-11-12T06:36:06Z"
+}

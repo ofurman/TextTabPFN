@@ -148,3 +148,7 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 ## 2026-11-12T06:54Z 11 bge evaluation: build accepted
 - `report followon-primary` -> exit 0; bge story-control +0.0008 [+0.0000,+0.0017] / +0.0004 / +0.0001; D-08 "harmful" on a lower bound of +4.2e-6 at n=8.
 - Native rescore equals stage 4. Commit 05de41b. Review dispatched with a bootstrap-seed robustness question.
+
+## 2026-11-12T07:01Z 11 bge evaluation: DONE
+- Review: no bugs. F1 (P2): harmful holds in 69/100 bootstrap seeds, t p=0.051 -> note wording; B-18. F2 (P3): ~86% of the n=8 gap is adapter-run variance -> note; B-19.
+- Orchestrator: run variance also affects role-token story-control; the stage-9 "omitted" corruption (same adapter, neutral tokens: +0.0037/+0.0046/+0.0035) is variance-free and matches 4000-step story-control (-0.0042). Added to stage 12 brief.

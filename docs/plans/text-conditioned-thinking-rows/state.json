@@ -179,7 +179,7 @@
     {
       "id": 11,
       "title": "Follow-on held-out evaluation",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "box": 2,
       "review": true,
       "depends": [
@@ -188,14 +188,15 @@
       "commit": [
         "05de41b"
       ],
-      "note": "",
+      "note": "bge story-control +0.0008/+0.0004/+0.0001; D-08 harmful but marginal (69/100 seeds, t p=0.051)",
       "startedAt": "2026-11-12T06:39Z",
-      "implementer": "omp/task, high"
+      "implementer": "omp/task, high",
+      "reviewer": "omp/reviewer, high"
     },
     {
       "id": 12,
       "title": "Iteration-2 results note",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "box": 1,
       "review": false,
       "depends": [
@@ -203,7 +204,9 @@
         11
       ],
       "commit": null,
-      "note": ""
+      "note": "",
+      "startedAt": "2026-11-12T07:01Z",
+      "implementer": "omp/task, high"
     },
     {
       "id": 13,

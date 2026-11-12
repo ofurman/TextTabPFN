@@ -1,4 +1,4 @@
-# 12 Iteration-2 results note (implementer omp/task, high; box 1 h, stop by STOPBY)
+# 12 Iteration-2 results note (implementer omp/task, high; box 1 h, stop by 2026-11-12T09:00Z)
 
 Repo: /Users/ofurman/pwr/texttabpfn, branch `thinking-rows`. Read `docs/plans/text-conditioned-thinking-rows/index.md` (iteration 2), `decisions.md` (D-07, D-08, D-11 through D-16), `journal.md`, `backlog.md`, the stage card `stages/12-iteration-2-results-note.md`, and every `reports/07-*` through `reports/13-*`.
 
@@ -38,7 +38,15 @@ Goal: one dated research note that records the iteration-2 numbers (stages 7, 9,
 
 ## Facts
 
-- STAGE11FACTS
+- Stage 11 (`report followon-primary`):
+  - bge story − control: +0.0008 [+0.0000, +0.0017] / +0.0004 / +0.0001 at n = 8 / 16 / 32. D-08 verdict "harmful".
+  - The verdict is marginal (reports/11-review.md F1). The n = 8 lower bound is +4.2e-6 at seed 0 and is above 0 in only 69/100 bootstrap seeds (95% CI 60–78%). A paired t-test gives p = 0.051.
+  - Write the bge verdict as: "harmful (D-08, bootstrap seed 0) — marginal: holds in 69/100 seeds, paired t p = 0.051, +0.0008 nats".
+- Training-run variance (reports/11-review.md F2):
+  - Each arm was trained once. About 86% of the bge n = 8 gap is the difference between the two trained adapters; the same story adapter fed story vs schema text differs by only +1.2e-4. The scene bootstrap does not cover training-run variance, and the same caveat applies to the role-token verdicts.
+  - Within-adapter evidence that avoids run variance comes from the stage-9 "omitted" corruption. That is the same 4000-step story adapter fed neutral tokens: omitted − story = +0.0037 / +0.0046 / +0.0035 at n = 8 / 16 / 32, all CIs above 0 (`report role-reliability`). This matches the 4000-step story − control gap (−0.0042), so the 4000-step role-token result holds within one adapter.
+  - No such within-adapter check exists for the 10k pair (B-16). The extra 10k widening comes about half from the control getting worse, which may be run variance. Say so.
+  - Name B-19 (multiple training seeds) as the fix.
 - The verdict rule checks "harmful" before "supported" (`report.d08_verdict`). Mention it only if it matters for a verdict here.
 - The working-tree edit to `docs/research/web/2026-11-04-text-tabular-attention.md` is the owner's and uncommitted. Do not modify it. If you link to it, use the file name only, with no anchor.
 

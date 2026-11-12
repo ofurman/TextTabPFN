@@ -17,3 +17,5 @@
 - B-15: Corruption runs for the follow-on arm of stage 10 (from: planning)
 - B-16: Role corruption runs for the 10k-step role-token arms (stage 13) (from: planning)
 - B-17: Train the B-09 bge-base arm for 10k steps if the 4000-step result is close to a verdict boundary (from: planning)
+- B-18: Print a bootstrap-seed stability line (share of seeds 0-99 that keep each verdict condition) in all D-08 primary reports (from: stage 11 review)
+- B-19: Train each adapter arm with 2-3 training seeds so story-vs-control verdicts include run-to-run variance (from: stage 11 review)

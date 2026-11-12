@@ -128,3 +128,11 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 ## 2026-11-12T03:03Z 13 10k training done
 - 80000 episodes/arm, 7.50 h; selected story step 9500 (dev 0.4334), control 6500 (dev 0.4364); 4000-step pair was 0.4335 vs 0.4381.
 - Longer training mainly improved the control on dev. Commit 81c0182. Held-out evaluation dispatched.
+
+## 2026-11-12T03:18Z 13 10k role tokens: DONE
+- `report role-training --results results/13-role-training-10k` -> exit 0, 80000 each; `report role10k-primary` -> exit 0; -0.0098/-0.0080/-0.0057, D-08 "supported". Commit a3815c8.
+- Gap widened vs 4000 steps from both sides: story -0.0027 at n=8, control +0.0029 at n=8 (10k control 0.6283 ≈ native 0.6292). Report this split, not just the gap.
+- Card check 1 already passed before stage 13 (--results existed); noted, not amended.
+
+## 2026-11-12T03:18Z D-14 applied
+- Input per D-15: role10k-primary verdict "supported" -> B-09 (bge-base-en-v1.5 pooled stories vs schema control). B-01 stays in backlog. Budget and size: D-16.

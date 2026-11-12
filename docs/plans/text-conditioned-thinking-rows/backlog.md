@@ -16,3 +16,4 @@
 - B-14: Extract per-feature role facts from free-form or LLM-paraphrased stories with a local LLM, feeding the role-token interface (D-11) (from: planning)
 - B-15: Corruption runs for the follow-on arm of stage 10 (from: planning)
 - B-16: Role corruption runs for the 10k-step role-token arms (stage 13) (from: planning)
+- B-17: Train the B-09 bge-base arm for 10k steps if the 4000-step result is close to a verdict boundary (from: planning)

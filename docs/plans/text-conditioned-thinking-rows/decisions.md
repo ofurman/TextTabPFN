@@ -84,3 +84,17 @@ The orchestrator records the choice in `journal.md`. The branch not taken stays 
 - Stage 10 waits for stage 13.
 
 Reason: the 4000-step story arm was still improving at its last checkpoint, so the better-trained pair is the fairer test of whether the shared channel uses roles. Not taken: continuing the 4000-step run with a new schedule, which would not give a clean budget-matched pair.
+
+## D-16: B-09 arm size and budget
+2026-11-12, planning, applied after D-14 selected B-09 (10k role-token verdict "supported").
+
+Design:
+- Arm: θᵢ + Wᵢ·P·e(t). e(t) is the frozen `BAAI/bge-base-en-v1.5` CLS embedding (768-d, L2-normalized, 512-token limit).
+- P (384×768) is shared and learned, from a fixed seeded init. Wᵢ (64×192×384) is zero-initialized. Total ≈ 5.0M parameters, close to D-11's ≈4.7M.
+- Story arm input = schema + story text. Control = schema text. Both arms start from identical weights.
+
+Budget: 4000 steps × 8 episodes, matching iteration 1. This isolates the encoder change against the iteration-1 MiniLM pair (+0.0012 at n=32, "harmful").
+
+Not taken:
+- A 10k-step budget, which would add about 4.5 h and confound encoder with training length (B-17).
+- A bare 768-d W (9.4M), which would double capacity.

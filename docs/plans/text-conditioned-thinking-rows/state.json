@@ -162,7 +162,7 @@
     {
       "id": 10,
       "title": "Follow-on arm training",
-      "status": "PENDING",
+      "status": "IN_PROGRESS",
       "box": 6,
       "review": false,
       "depends": [
@@ -170,7 +170,9 @@
         13
       ],
       "commit": null,
-      "note": ""
+      "note": "",
+      "startedAt": "2026-11-12T03:19Z",
+      "implementer": "omp/task, high"
     },
     {
       "id": 11,
@@ -200,16 +202,17 @@
     {
       "id": 13,
       "title": "Ten-thousand-step role-token training and evaluation",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "box": 9,
       "review": false,
       "depends": [
         8
       ],
       "commit": [
-        "81c0182"
+        "81c0182",
+        "a3815c8"
       ],
-      "note": "",
+      "note": "10k: story-control -0.0098/-0.0080/-0.0057 at n=8/16/32, supported; control slightly worse than 4000-step at n=8",
       "startedAt": "2026-11-11T19:17Z",
       "implementer": "orchestrator (launch), omp/task, high (eval)"
     }

@@ -152,3 +152,7 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 ## 2026-11-12T07:01Z 11 bge evaluation: DONE
 - Review: no bugs. F1 (P2): harmful holds in 69/100 bootstrap seeds, t p=0.051 -> note wording; B-18. F2 (P3): ~86% of the n=8 gap is adapter-run variance -> note; B-19.
 - Orchestrator: run variance also affects role-token story-control; the stage-9 "omitted" corruption (same adapter, neutral tokens: +0.0037/+0.0046/+0.0035) is variance-free and matches 4000-step story-control (-0.0042). Added to stage 12 brief.
+
+## 2026-11-12T07:03Z 12 Results note: DONE
+- `grep -l '^Verdict:' docs/research/web/*-per-feature-role-tokens-results.md` -> 1 file; `./scripts/lint_related_works.sh` -> passed.
+- Orchestrator fix: large-n preprocessing sentence overstated adapters (4k role story is +0.0006..0.0008 vs native at n>=512). Commit 3f81e5e. Final review next.

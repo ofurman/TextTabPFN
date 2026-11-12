@@ -196,15 +196,17 @@
     {
       "id": 12,
       "title": "Iteration-2 results note",
-      "status": "IN_PROGRESS",
+      "status": "DONE",
       "box": 1,
       "review": false,
       "depends": [
         9,
         11
       ],
-      "commit": null,
-      "note": "",
+      "commit": [
+        "3f81e5e"
+      ],
+      "note": "iteration-2 note with three verdicts; lint passes",
       "startedAt": "2026-11-12T07:01Z",
       "implementer": "omp/task, high"
     },

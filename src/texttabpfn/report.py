@@ -17,7 +17,16 @@ from pathlib import Path
 
 import numpy as np
 
-from texttabpfn import evaluation, followon, reliability, role_eval, role_training, roleinfo, training
+from texttabpfn import (
+    evaluation,
+    followon,
+    followon_eval,
+    reliability,
+    role_eval,
+    role_training,
+    roleinfo,
+    training,
+)
 from texttabpfn.capacity import ARMS, CONFIG_JSON, RESULTS_DIR, SUPPORT_SIZES, Settings, arm_csv
 from texttabpfn.scenes import HELDOUT_FAMILIES, eval_scene_specs
 
@@ -726,6 +735,126 @@ def print_role10k_primary(args: argparse.Namespace) -> int:
     return 0
 
 
+def _followon_scores(
+    results_dir: Path, adapters_dir: Path, primary_dir: Path
+) -> tuple[list[tuple[int, int]], dict[tuple[int, int, int, str], float], float]:
+    """Scenes, scores and the largest |rescored - stage 4| native row; raises unless the design
+    matches, every required row is finite and the rescore sample matches stage 4."""
+    config_path = results_dir / followon_eval.CONFIG_JSON
+    if not config_path.exists():
+        raise IncompleteResults(f"missing {config_path}")
+    config = json.loads(config_path.read_text())
+    core = followon_eval._config_core(adapters_dir)
+    other = sorted(k for k in core if config.get(k) != core[k])
+    if other:
+        raise IncompleteResults(f"{config_path} differs from the expected design in {other}")
+    scenes = [tuple(s) for s in config["scenes"]]
+    for name in (followon_eval.SCORES_CSV, followon_eval.RESCORE_CSV):
+        if not (results_dir / name).exists():
+            raise IncompleteResults(f"missing {results_dir / name}")
+    scores = role_eval.read_scores(results_dir)
+    need = sorted(followon_eval.required_rows())
+    missing = [
+        (f, s, n, arm)
+        for f, s in scenes
+        for n, arm in need
+        if not math.isfinite(scores.get((f, s, n, arm), math.nan))
+    ]
+    if missing:
+        raise IncompleteResults(
+            f"{len(missing)} of {len(scenes) * len(need)} (scene, n, arm) rows missing or non-finite "
+            f"(first: {missing[:3]})"
+        )
+    rescored = role_eval.read_scores(results_dir, followon_eval.RESCORE_CSV)
+    keys = [
+        (f, s, n, evaluation.NATIVE)
+        for f, s in scenes[: followon_eval.RESCORE_SCENES]
+        for n in evaluation.Settings().sizes
+    ]
+    if any(not math.isfinite(rescored.get(k, math.nan)) for k in keys):
+        raise IncompleteResults(f"{results_dir / followon_eval.RESCORE_CSV} lacks rescore rows")
+    primary = evaluation.read_scores(primary_dir)
+    return scenes, scores, float(np.max([abs(rescored[k] - primary.get(k, math.nan)) for k in keys]))
+
+
+def print_followon_primary(args: argparse.Namespace) -> int:
+    """bge story minus bge control at n = 8, 16, 32 and the D-08 verdict; secondary: per family,
+    every n, and the context arms (native, preprocessing, MiniLM, role tokens) on the same rows."""
+    scenes, scores, drift = _followon_scores(args.results, args.adapters, args.primary)
+    if not drift <= followon_eval.RESCORE_TOL:
+        raise IncompleteResults(f"re-scored native rows differ from stage 4 by {drift:.2e}")
+    story, control = followon_eval.STORY, followon_eval.CONTROL
+    steps = json.loads((args.results / followon_eval.CONFIG_JSON).read_text())["adapters"]
+
+    def diff(sub: list[tuple[int, int]], n: int) -> np.ndarray:
+        return _per_scene(scores, sub, n, story) - _per_scene(scores, sub, n, control)
+
+    print(
+        f"Stage 11 followon-primary (D-08): bge-base follow-on adapters (story step "
+        f"{steps[story]['step']}, control step {steps[control]['step']}), {len(scenes)} held-out scenes "
+        f"(families 4-5), stage 4 rows; paired per-scene difference bge story - bge control "
+        f"query log loss, 95% scene-bootstrap CI ({BOOTSTRAP_RESAMPLES} resamples)"
+    )
+    print(f"{'n':>5} {'control':>8} {'story':>8}  {'story - control [95% CI]':>28}")
+    cis = {}
+    for n in PRIMARY_SIZES:
+        d = diff(scenes, n)
+        cis[n] = scene_bootstrap_ci(d)
+        means = [_per_scene(scores, scenes, n, arm).mean() for arm in (control, story)]
+        print(f"{n:>5} " + " ".join(f"{m:>8.4f}" for m in means) + f"  {_diff_cell(d):>28}")
+    print(f"D-08 verdict: {d08_verdict(cis)}")
+    print(f"Native rescore sample ({followon_eval.RESCORE_SCENES} scenes): max |rescored - stage 4| = {drift:.1e}")
+
+    print("\nSecondary: bge story - bge control by held-out family [95% CI]")
+    families = {fam: [sc for sc in scenes if sc[0] == fam] for fam in HELDOUT_FAMILIES}
+    print(f"{'n':>5} " + " ".join(f"{f'family {fam} ({len(sub)} scenes)':>28}" for fam, sub in families.items()))
+    for n in PRIMARY_SIZES:
+        print(f"{n:>5} " + " ".join(f"{_diff_cell(diff(sub, n)):>28}" for sub in families.values()))
+
+    # Context arms, all on the same rows: stage 4 (native, MiniLM schema/story), stage 7
+    # preprocessing (support + query), stage 9 and 13 role-token story arms.
+    sizes = evaluation.Settings().sizes
+    context = {}
+    for path, rows in (
+        (args.primary, _evaluation_scores(args.primary, sizes)),
+        (args.roleinfo, _roleinfo_scores(args.roleinfo)),
+        (args.stage9, _role_eval_scores(args.stage9)),
+        (args.role10k, _role_eval_scores(args.role10k, args.role10k_adapters, full=False)),
+    ):
+        if rows[0] != scenes:
+            raise IncompleteResults(f"{path} scores other scenes than {args.results}")
+        context[path] = rows[1]
+    ref = {
+        "native": (context[args.primary], evaluation.NATIVE),
+        "preproc": (context[args.roleinfo], roleinfo.ROLES),
+        "MiniLM schema": (context[args.primary], "schema"),
+        "MiniLM story": (context[args.primary], "story"),
+        "role 4k story": (context[args.stage9], role_eval.STORY),
+        "role 10k story": (context[args.role10k], role_eval.STORY),
+    }
+
+    def ref_scene(name: str, n: int) -> np.ndarray:
+        table, arm = ref[name]
+        return _per_scene(table, scenes, n, arm)
+
+    print("\nSecondary: mean query log loss at every n (same rows)")
+    names = ["bge control", "bge story", *ref]
+    print(f"{'n':>5} " + " ".join(f"{name:>14}" for name in names))
+    for n in sizes:
+        means = [_per_scene(scores, scenes, n, a).mean() for a in (control, story)]
+        means += [ref_scene(name, n).mean() for name in ref]
+        print(f"{n:>5} " + " ".join(f"{m:>14.4f}" for m in means))
+    print("\nSecondary: every n; bge story - control, and bge story - context arm [95% CI]")
+    cols = ["native", "MiniLM story", "role 10k story"]
+    print(f"{'n':>5} {'story - control':>28} " + " ".join(f"{'story - ' + c:>28}" for c in cols))
+    for n in sizes:
+        bge = _per_scene(scores, scenes, n, story)
+        cells = [diff(scenes, n)] + [bge - ref_scene(c, n) for c in cols]
+        print(f"{n:>5} " + " ".join(f"{_diff_cell(c):>28}" for c in cells))
+    return 0
+
+
+
 def print_role_curve(args: argparse.Namespace) -> int:
     """Role-token arms against each other and the references at every support size."""
     scenes, scores = _role_eval_scores(args.results)
@@ -842,6 +971,15 @@ def main(argv: list[str] | None = None) -> int:
     r10.add_argument("--adapters", type=Path, default=Path("results/13-role-training-10k"))
     r10.add_argument("--stage9", type=Path, default=role_eval.RESULTS_DIR)
     r10.set_defaults(func=print_role10k_primary)
+    fop = sub.add_parser("followon-primary", help="stage 11: bge follow-on story - control, D-08 verdict")
+    fop.add_argument("--results", type=Path, default=followon_eval.RESULTS_DIR)
+    fop.add_argument("--adapters", type=Path, default=followon.RESULTS_DIR)
+    fop.add_argument("--primary", type=Path, default=evaluation.RESULTS_DIR)
+    fop.add_argument("--roleinfo", type=Path, default=roleinfo.RESULTS_DIR)
+    fop.add_argument("--stage9", type=Path, default=role_eval.RESULTS_DIR)
+    fop.add_argument("--role10k", type=Path, default=Path("results/13-role-eval-10k"))
+    fop.add_argument("--role10k-adapters", type=Path, default=Path("results/13-role-training-10k"))
+    fop.set_defaults(func=print_followon_primary)
     rcu = sub.add_parser("role-curve", help="stage 9: role-token arms vs control and references at every n")
     rcu.add_argument("--results", type=Path, default=role_eval.RESULTS_DIR)
     rcu.add_argument("--primary", type=Path, default=evaluation.RESULTS_DIR)

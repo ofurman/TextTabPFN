@@ -185,7 +185,9 @@
       "depends": [
         10
       ],
-      "commit": null,
+      "commit": [
+        "05de41b"
+      ],
       "note": "",
       "startedAt": "2026-11-12T06:39Z",
       "implementer": "omp/task, high"

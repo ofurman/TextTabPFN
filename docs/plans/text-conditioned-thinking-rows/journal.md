@@ -144,3 +144,7 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 
 ## 2026-11-12T06:39Z 10 re-plan
 - Keep 11 and 12. Stage 11 brief notes the expected held-out null. Cut nothing.
+
+## 2026-11-12T06:54Z 11 bge evaluation: build accepted
+- `report followon-primary` -> exit 0; bge story-control +0.0008 [+0.0000,+0.0017] / +0.0004 / +0.0001; D-08 "harmful" on a lower bound of +4.2e-6 at n=8.
+- Native rescore equals stage 4. Commit 05de41b. Review dispatched with a bootstrap-seed robustness question.

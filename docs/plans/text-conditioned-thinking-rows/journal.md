@@ -156,3 +156,7 @@ Append-only. Entries of at most 5 lines. Evidence is `command` -> result on one 
 ## 2026-11-12T07:03Z 12 Results note: DONE
 - `grep -l '^Verdict:' docs/research/web/*-per-feature-role-tokens-results.md` -> 1 file; `./scripts/lint_related_works.sh` -> passed.
 - Orchestrator fix: large-n preprocessing sentence overstated adapters (4k role story is +0.0006..0.0008 vs native at n>=512). Commit 3f81e5e. Final review next.
+
+## 2026-11-12T07:08Z iteration 2 complete
+- Final review: correct, no P0-P2; two P3 wording fixes applied to the results note. Lint passes.
+- All iteration-2 stages DONE (7-13); see reports/final-2.md.

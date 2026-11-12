@@ -100,7 +100,7 @@ Against references (mean query log loss, `report role-curve`, `report followon-p
 | 16 | 0.5721 | +0.00460 [+0.00341, +0.00587] | +0.00595 [+0.00412, +0.00784] | +0.00582 [+0.00399, +0.00781] |
 | 32 | 0.5229 | +0.00348 [+0.00271, +0.00440] | +0.00475 [+0.00371, +0.00585] | +0.00462 [+0.00339, +0.00593] |
 
-- "Irrelevant and wrong roles cost more than omitted ones" holds for point estimates only; the CIs overlap at n = 16.
+- "Irrelevant and wrong roles cost more than omitted ones" holds for point estimates only. The CIs overlap at every n, except wrong vs omitted at n = 8.
 - Corruptions change only part of the slots (stage 9 review): omitted 1.00, irrelevant 0.79 on average (min 0.30), wrong 0.67 (min 0.20). The figures measure partial corruption.
 - Omitted − story (+0.0037 / +0.0046 / +0.0035) is the same adapter fed neutral tokens, so it avoids training-run variance; it matches the 4000-step story − control gap (−0.0042). The 4000-step role-token result therefore holds within one adapter.
 
@@ -125,7 +125,7 @@ Each arm was trained once. In the bge pair about 86% of the n = 8 gap is the dif
 ### Interpretation
 
 - [INFERENCE] Exposing per-feature structure, rather than pooling it, is what made the shared thinking-row channel use the story: the same channel that ignored pooled stories in iteration 1 responds to role tokens, and corrupting them hurts.
-- A stronger pooled encoder did not: bge's pooled story embeddings are even more alike than MiniLM's, and the bge arm ties its control.
+- [INFERENCE] A stronger pooled encoder did not help. The bge arm is at best null against its control (D-08 "harmful", marginal), and bge's pooled story embeddings are even more alike than MiniLM's. That similarity is a plausible mechanism, not a proven cause.
 - Story-guided preprocessing still beats the learned adapter at small n: 0.6128 vs 0.6185 for the 10k role story at n = 8. At large n it hurts much more than the adapter: preprocessing − native is +0.0058 at n = 256 and +0.0132 at n = 1024, while 4000-step role story − native is +0.0006 to +0.0008 at n = 512–1024.
 
 ### What this does and does not show

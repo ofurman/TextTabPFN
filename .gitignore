@@ -6,3 +6,15 @@ __pycache__/
 .env.*
 !.env.example
 .ipynb_checkpoints/
+
+# texttabpfn experiment: checkpoints, caches, large artifacts
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+results/**/*.npy
+results/**/*.npz
+results/**/*.log

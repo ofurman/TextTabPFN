@@ -1,0 +1,256 @@
+{
+  "plan": "text-conditioned-thinking-rows",
+  "iteration": 2,
+  "stages": [
+    {
+      "id": 1,
+      "title": "Channel capacity of the thinking rows",
+      "status": "DONE",
+      "box": 6,
+      "review": true,
+      "depends": [],
+      "commit": [
+        "bdeb972",
+        "c9f99c5"
+      ],
+      "note": "shared-row capacity 0.162/0.124/0.075 nats at n=8/16/32 (CIs exclude 0); per-column 0.200/0.154/0.100; review P1+P3 fixed",
+      "implementer": "omp/task, high",
+      "reviewer": "omp/reviewer, high",
+      "fixRounds": 1,
+      "startedAt": "2026-11-10T17:20Z"
+    },
+    {
+      "id": 2,
+      "title": "Stories and parity-checked adapter",
+      "status": "DONE",
+      "box": 4,
+      "review": false,
+      "depends": [
+        1
+      ],
+      "commit": [
+        "8cbb249"
+      ],
+      "note": "parity exact (0 diff, CPU+MPS), label isolation holds, max text 159/256 tokens; W 4,718,592 params",
+      "implementer": "omp/task, high",
+      "reviewer": null,
+      "fixRounds": 0,
+      "startedAt": "2026-11-10T22:25Z"
+    },
+    {
+      "id": 3,
+      "title": "Episodic training of story and schema-only arms",
+      "status": "DONE",
+      "box": 6,
+      "review": false,
+      "depends": [
+        2
+      ],
+      "commit": [
+        "bd92e7c"
+      ],
+      "note": "32k episodes per arm; selected step 3250 both; dev val story 0.4387 vs schema 0.4376 vs native 0.4464",
+      "implementer": "omp/task, high",
+      "reviewer": null,
+      "fixRounds": 0,
+      "startedAt": "2026-11-10T23:30Z"
+    },
+    {
+      "id": 4,
+      "title": "Primary evaluation over support sizes",
+      "status": "DONE",
+      "box": 3,
+      "review": true,
+      "depends": [
+        3
+      ],
+      "commit": [
+        "b97088c"
+      ],
+      "note": "D-08 verdict harmful: story-schema +0.0012 [+0.0005,+0.0019] at n=32; |effects| ~1e-3 nats; adapters beat native at n<=64",
+      "implementer": "omp/task, high",
+      "reviewer": "omp/reviewer, high",
+      "fixRounds": 0,
+      "startedAt": "2026-11-11T02:50Z"
+    },
+    {
+      "id": 5,
+      "title": "Context reliability evaluation",
+      "status": "DONE",
+      "box": 2,
+      "review": false,
+      "depends": [
+        3
+      ],
+      "commit": [
+        "6b10c09"
+      ],
+      "note": "omitted-story +0.0015/+0.0007/+0.0007 (CI>0); irrelevant and wrong CIs include 0; story content not used",
+      "implementer": "omp/task, high",
+      "reviewer": null,
+      "fixRounds": 0,
+      "startedAt": "2026-11-11T03:10Z"
+    },
+    {
+      "id": 6,
+      "title": "Results note and verdict",
+      "status": "DONE",
+      "box": 1,
+      "review": false,
+      "depends": [
+        4,
+        5
+      ],
+      "commit": [
+        "d6cdcef"
+      ],
+      "note": "results note with Verdict: harmful (~1e-3 nats); lint passes",
+      "implementer": "omp/task, high",
+      "reviewer": null,
+      "fixRounds": 0,
+      "startedAt": "2026-11-11T03:30Z"
+    },
+    {
+      "id": 7,
+      "title": "Value of story roles to native TabPFN",
+      "status": "DONE",
+      "box": 2,
+      "review": true,
+      "depends": [],
+      "commit": [
+        "241746f"
+      ],
+      "note": "story-role preprocessing beats native by 0.016-0.020 at n=8-32 (CIs<0), hurts at n>=256; D-13 not fired",
+      "startedAt": "2026-11-11T04:20Z",
+      "implementer": "omp/task, high",
+      "reviewer": "omp/reviewer, high"
+    },
+    {
+      "id": 8,
+      "title": "Role-token adapter and matched control training",
+      "status": "DONE",
+      "box": 6,
+      "review": false,
+      "depends": [
+        7
+      ],
+      "commit": [
+        "eaee451",
+        "26aacb7"
+      ],
+      "note": "32k episodes/arm; dev val story 0.4335 vs control 0.4381 vs native 0.4464; story selected at final step",
+      "startedAt": "2026-11-11T11:51Z",
+      "implementer": "omp/task, high"
+    },
+    {
+      "id": 9,
+      "title": "Role-token held-out evaluation",
+      "status": "DONE",
+      "box": 2,
+      "review": true,
+      "depends": [
+        8
+      ],
+      "commit": [
+        "5b8cd0d"
+      ],
+      "note": "4000-step role tokens: story-control -0.0042/-0.0042/-0.0041 at n=8/16/32, D-08 supported; all corruptions hurt",
+      "startedAt": "2026-11-11T19:15Z",
+      "implementer": "omp/task, high",
+      "reviewer": "omp/reviewer, high"
+    },
+    {
+      "id": 10,
+      "title": "Follow-on arm training",
+      "status": "DONE",
+      "box": 6,
+      "review": false,
+      "depends": [
+        9,
+        13
+      ],
+      "commit": [
+        "b583d2c"
+      ],
+      "note": "bge 5.0M params; dev story 0.4377 = control 0.4377; same-p cosine 0.9936",
+      "startedAt": "2026-11-12T03:19Z",
+      "implementer": "omp/task, high"
+    },
+    {
+      "id": 11,
+      "title": "Follow-on held-out evaluation",
+      "status": "DONE",
+      "box": 2,
+      "review": true,
+      "depends": [
+        10
+      ],
+      "commit": [
+        "05de41b"
+      ],
+      "note": "bge story-control +0.0008/+0.0004/+0.0001; D-08 harmful but marginal (69/100 seeds, t p=0.051)",
+      "startedAt": "2026-11-12T06:39Z",
+      "implementer": "omp/task, high",
+      "reviewer": "omp/reviewer, high"
+    },
+    {
+      "id": 12,
+      "title": "Iteration-2 results note",
+      "status": "DONE",
+      "box": 1,
+      "review": false,
+      "depends": [
+        9,
+        11
+      ],
+      "commit": [
+        "3f81e5e"
+      ],
+      "note": "iteration-2 note with three verdicts; lint passes",
+      "startedAt": "2026-11-12T07:01Z",
+      "implementer": "omp/task, high"
+    },
+    {
+      "id": 13,
+      "title": "Ten-thousand-step role-token training and evaluation",
+      "status": "DONE",
+      "box": 9,
+      "review": false,
+      "depends": [
+        8
+      ],
+      "commit": [
+        "81c0182",
+        "a3815c8"
+      ],
+      "note": "10k: story-control -0.0098/-0.0080/-0.0057 at n=8/16/32, supported; control slightly worse than 4000-step at n=8",
+      "startedAt": "2026-11-11T19:17Z",
+      "implementer": "orchestrator (launch), omp/task, high (eval)"
+    }
+  ],
+  "settings": {
+    "preset": "lean",
+    "reviews": "flagged",
+    "tripwireHours": 3,
+    "harness": "omp",
+    "startedAt": "2026-11-10T17:18Z"
+  },
+  "roles": {
+    "orchestrator": "omp/claude-opus-5-5",
+    "implementer": {
+      "agent": "omp/task",
+      "effort": "high",
+      "command": null
+    },
+    "reviewer": {
+      "agent": "omp/reviewer",
+      "effort": "high",
+      "command": null
+    },
+    "helper": {
+      "agent": "omp/sonic",
+      "effort": "medium",
+      "command": null
+    }
+  }
+}

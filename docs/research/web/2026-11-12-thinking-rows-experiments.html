@@ -53,75 +53,178 @@ tr:last-child td{border-bottom:none}
 code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 5px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:800px){.two{grid-template-columns:1fr}}
 footer{margin-top:56px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border);padding-top:16px}
+
+pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;overflow-x:auto;font-size:.82rem;line-height:1.5;margin:12px 0}
+pre code{background:none;border:none;padding:0;font-size:inherit}
+.example{border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:8px;padding:10px 14px;background:var(--surface);margin:12px 0;font-size:.92rem}
+.example .lbl{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;display:block;margin-bottom:4px}
+.steps li{margin:4px 0}
 </style></head><body><main>
 <header>
 <h1>Can a task story help TabPFN-2.5 predict from few labels?</h1>
 <p class="sub">Text-conditioned thinking rows: two iterations of controlled experiments on synthetic causal scenes</p>
-<p class="meta">Experiments run 2026-11-10 → 2026-11-12 on a local Apple M4 Pro (PyTorch MPS) · tabpfn 9.2.0, TabPFN-2.5 classifier checkpoint (frozen) · branch <code>thinking-rows</code></p>
+<p class="meta">Runs: 2026-11-10 to 2026-11-12 on one Apple M4 Pro (PyTorch MPS). Software: tabpfn 9.2.0 with the frozen TabPFN-2.5 classifier checkpoint. Branch <code>thinking-rows</code>.</p>
 </header>
 
-<div class="tldr"><strong>Bottom line</strong>
+<div class="tldr"><strong>Results</strong>
 <ul>
-<li>Feeding the <em>whole story as one pooled embedding</em> into TabPFN-2.5's thinking rows did <strong>not</strong> help — neither with MiniLM nor with the stronger bge-base encoder. Pooled stories look almost identical to the encoder (cosine ≈ 0.99 between different stories).</li>
-<li>Giving <em>each feature its own role token</em> through the same channel <strong>did</strong> help: 0.004–0.010 nats lower log loss than a matched control at n = 8–32 on held-out scene families, and corrupting the roles hurts.</li>
-<li>Simple story-guided preprocessing (drop irrelevant features, merge redundant measurements) still beats every learned adapter at n ≤ 32 — but hurts at large n.</li>
-<li>Each adapter was trained once, so training-run variance is not in the confidence intervals; the 4000-step role-token result is confirmed within a single adapter.</li>
+<li>One pooled vector for the whole story did not help. This result holds for MiniLM and for the larger bge-base encoder. Different stories give almost the same vector (cosine about 0.99).</li>
+<li>One token per feature role helped. The story arm beat its control by 0.004 to 0.010 nats at n = 8 to 32. This result holds on the held-out scene families. Corrupted roles made the predictions worse.</li>
+<li>Story-guided preprocessing still beats every trained adapter at n ≤ 32. At large n, it makes the predictions worse.</li>
+<li>We trained each adapter once. The confidence intervals do not include training-run variance. A same-adapter check confirms the 4000-step role-token result.</li>
 </ul></div>
 
 <div class="grid3">
 <div class="card"><div class="k">0.16</div><div class="l">nats: upper limit of the thinking-row channel at n = 8 (rows optimized per scene with labels)</div></div>
-<div class="card"><div class="k">0.017–0.020</div><div class="l">nats: what exact story roles are worth to native TabPFN through preprocessing (n = 8–32)</div></div>
-<div class="card"><div class="k">−0.0098</div><div class="l">nats: best learned story effect over its control (role tokens, 10k steps, n = 8)</div></div>
-<div class="card"><div class="k">+0.0008</div><div class="l">nats: pooled bge story vs control at n = 8 — effectively null</div></div>
+<div class="card"><div class="k">0.017 to 0.020</div><div class="l">nats: value of the exact story roles to native TabPFN through preprocessing (n = 8 to 32)</div></div>
+<div class="card"><div class="k">−0.0098</div><div class="l">nats: best story arm minus its control (role tokens, 10k steps, n = 8)</div></div>
+<div class="card"><div class="k">+0.0008</div><div class="l">nats: bge story arm minus its control at n = 8. In practice, no effect.</div></div>
 </div>
 
-<h2>1. The question</h2>
-<p>A tabular foundation model like TabPFN-2.5 learns from a small labeled table in context. Often the table comes with a natural-language description of the setting. The research question: <strong>does giving the model that description — one shared story per dataset — improve predictions from few labels, and how does the benefit change as labels grow?</strong></p>
-<p>Both the story-aware model and its baseline receive the same labeled rows, the same feature schema and target definition; the only difference is access to the story. Improvement is a hypothesis under test, not an assumption.</p>
+<h2>1. Question</h2>
+<p>TabPFN-2.5 learns from a small labeled table in context. A table often comes with a text that describes its setting. We ask two questions. Does one shared story per dataset improve predictions from few labels? How does the benefit change when the number of labels grows?</p>
+<p>The story arm and its control get the same labeled rows, the same feature schema and the same target definition. Only the story arm gets the story. We test the improvement as a hypothesis. We do not assume it.</p>
 
 <h2>2. Setup</h2>
 <h3>Synthetic scenes with known ground truth</h3>
-<p>Each scene is a random causal graph (structural causal model) with 6–15 continuous features and a binary target. Every feature has one hidden role:</p>
+<p>Each scene is a random structural causal model. It has 6 to 15 numeric features and a binary target y. Each feature has one hidden role:</p>
 <ul>
-<li><strong>Markov blanket</strong> — directly influences y, or is directly influenced by y;</li>
-<li><strong>irrelevant</strong> — generated independently of y;</li>
-<li><strong>noisy measurement</strong> — one of 2–3 noisy readings of the same hidden cause of y.</li>
+<li><strong>Markov blanket:</strong> the feature causes y, or y causes the feature.</li>
+<li><strong>Irrelevant:</strong> the feature has no causal path to y.</li>
+<li><strong>Noisy measurement:</strong> the feature is one of 2 or 3 noisy readings of one hidden cause of y.</li>
 </ul>
-<p>Six mechanism families (linear, tanh, interaction × Gaussian or heavy-tailed noise). Families 0–3 train the adapters; <strong>families 4–5 (interaction mechanism) are held out</strong> and used for every reported verdict. Features are named neutrally (<code>x1 … xp</code>), so names carry no hint.</p>
-<h3>The story</h3>
-<p>Template text stating only structural facts — which features influence y, which are unrelated, which measure the same hidden quantity. No coefficients, signs, equations or noise levels. Example:</p>
-<p class="callout"><code>Known structure: x2, x4 and x6 directly influence y. x3 is directly influenced by y. x5, x7 and x8 are noisy measurements of one hidden quantity that influences y. x1 is unrelated to y.</code></p>
-<h3>Where the text enters the model</h3>
-<p>TabPFN-2.5 prepends 64 learned “thinking rows” that every column and every query row reads. The idea under test: shift those rows by a learned function of the story, <code>θᵢ ← θᵢ + Wᵢ·e(t)</code>. TabPFN and the text encoder stay frozen; only Wᵢ (zero-initialized, so the model starts exactly at native TabPFN) is trained across thousands of synthetic scenes.</p>
-<figure><svg viewBox="0 0 760 300" class="chart" role="img" aria-label="Architecture">
-<text x="20" y="22" class="ctitle">Where the text enters: TabPFN-2.5's 64 thinking rows</text>
-<rect x="20" y="50" width="200" height="60" rx="8" class="box2"/><text x="120" y="75" text-anchor="middle" class="leg">Story / role sentences</text><text x="120" y="95" text-anchor="middle" class="tick">schema + structural facts only</text>
-<rect x="20" y="140" width="200" height="60" rx="8" class="box2"/><text x="120" y="165" text-anchor="middle" class="leg">Frozen text encoder</text><text x="120" y="185" text-anchor="middle" class="tick">MiniLM (384-d) or bge-base (768-d)</text>
-<line x1="120" y1="110" x2="120" y2="138" class="arrow" marker-end="url(#ah)"/>
-<rect x="20" y="230" width="200" height="50" rx="8" class="box3"/><text x="120" y="252" text-anchor="middle" class="leg">Trainable map Wᵢ (zero-init)</text><text x="120" y="270" text-anchor="middle" class="tick">≈4.6–5.0M parameters</text>
-<line x1="120" y1="200" x2="120" y2="228" class="arrow" marker-end="url(#ah)"/>
-<line x1="220" y1="255" x2="300" y2="110" class="arrow" marker-end="url(#ah)"/>
-<text x="232" y="190" class="tick">θᵢ ← θᵢ + Wᵢ·e(t)</text>
-<rect x="300" y="50" width="430" height="230" rx="10" class="box1"/>
-<text x="515" y="72" text-anchor="middle" class="leg">Frozen TabPFN-2.5 (attention across rows and feature groups)</text>
-<g>
-<rect x="320" y="85" width="390" height="40" rx="4" class="think"/><text x="515" y="110" text-anchor="middle" class="leg">64 thinking rows (shared across all columns)</text>
-<rect x="320" y="135" width="390" height="70" rx="4" class="train"/><text x="515" y="165" text-anchor="middle" class="leg">n labeled support rows (x, y)</text><text x="515" y="185" text-anchor="middle" class="tick">feature groups of 3 + target column</text>
-<rect x="320" y="215" width="390" height="50" rx="4" class="test"/><text x="515" y="245" text-anchor="middle" class="leg">512 query rows → predicted P(y = 1)</text>
-</g>
-<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahead"/></marker></defs>
-</svg><figcaption>The story conditions only the 64 thinking rows; the rows are shared across all columns (they carry no per-column embedding in TabPFN-2.5).</figcaption></figure>
+<p>Six families combine three mechanisms (linear, tanh, interaction) with two noise types (Gaussian, heavy-tailed). Families 0 to 3 train the adapters. Families 4 and 5 (interaction mechanism) are the held-out test set. All verdicts use only families 4 and 5. Feature names are neutral (<code>x1</code> to <code>xp</code>), so the names give no hint.</p>
 <h3>Fair comparison and statistics</h3>
 <ul>
-<li><strong>Matched control:</strong> the same architecture, budget, episodes and learning rate, but reading only the schema (or neutral tokens). Story − control isolates the value of story content from generic retuning of the thinking rows.</li>
-<li><strong>Evaluation:</strong> 200 held-out scenes; support sizes n = 8 … 1024; 5 nested support draws per scene; 512 fixed query rows; every arm scores identical rows.</li>
-<li><strong>Metric:</strong> paired per-scene query log loss difference with a 95% scene-bootstrap CI (1000 resamples).</li>
-<li><strong>Verdict rule (fixed before any result, “D-08”):</strong> <em>supported</em> if the CI upper bound is below 0 at ≥ 2 of n = 8, 16, 32; <em>harmful</em> if the lower bound is above 0 at any of them; otherwise <em>not supported</em>.</li>
+<li><strong>Control arm:</strong> the same architecture, budget, episodes and learning rate. It reads only the schema or neutral tokens. Story arm minus control arm isolates the value of the story content. Generic tuning of the thinking rows helps both arms equally.</li>
+<li><strong>Evaluation:</strong> 200 held-out scenes. Support sizes n = 8 to 1024. Five nested support draws per scene. 512 fixed query rows. All arms score the same rows.</li>
+<li><strong>Metric:</strong> the paired per-scene difference in query log loss, with a 95% scene-bootstrap CI (1000 resamples).</li>
+<li><strong>Verdict rule D-08:</strong> we fixed this rule before the first result. The rule gives <em>supported</em> if at least two of n = 8, 16, 32 have a CI upper bound below 0. It gives <em>harmful</em> if one of these n has a CI lower bound above 0. Otherwise it gives <em>not supported</em>.</li>
 </ul>
 
-<h2>3. Results at a glance</h2>
-<table class="num"><thead><tr><th>Arm</th><th>What the adapter reads</th><th>n = 8</th><th>n = 16</th><th>n = 32</th><th>D-08 verdict</th></tr></thead><tbody><tr><td>Iteration 1</td><td>whole story → one pooled MiniLM vector</td><td>−0.0008 [−0.0019, +0.0003]</td><td>+0.0001 [−0.0008, +0.0010]</td><td>+0.0012 [+0.0005, +0.0019]</td><td><span class="pill bad">harmful</span></td></tr><tr><td>Role tokens, 4000 steps</td><td>one MiniLM token per feature role</td><td>−0.0042 [−0.0064, −0.0020]</td><td>−0.0042 [−0.0057, −0.0027]</td><td>−0.0041 [−0.0052, −0.0030]</td><td><span class="pill ok">supported</span></td></tr><tr><td>Role tokens, 10k steps</td><td>same, trained 2.5× longer</td><td>−0.0098 [−0.0121, −0.0075]</td><td>−0.0080 [−0.0097, −0.0064]</td><td>−0.0057 [−0.0071, −0.0044]</td><td><span class="pill ok">supported</span></td></tr><tr><td>bge follow-on</td><td>whole story → one pooled bge-base vector</td><td>+0.0008 [+0.0000, +0.0017]</td><td>+0.0004 [−0.0001, +0.0010]</td><td>+0.0001 [−0.0004, +0.0005]</td><td><span class="pill warn">harmful (marginal)</span></td></tr></tbody></table>
-<p class="note">Cells: story − control log loss (nats) [95% CI]. Negative = the story helps.</p>
+<h2>3. How the methods work</h2>
+<p>This section uses one real held-out scene as the example: family 4, seed 2000000. It has 9 features. The code paths are in <code>src/texttabpfn/</code>. The code blocks below are short versions of the real code. Names such as <code>seeded_init</code> stand for longer code.</p>
+
+<h3>3.1 TabPFN-2.5 thinking rows</h3>
+<p>TabPFN-2.5 embeds each table cell as a 192-dimensional vector. Before the transformer layers, it puts 64 learned “thinking rows” in front of the labeled rows. Every column gets the same 64 vectors. All labeled rows and query rows can attend to them. Our methods change only these 64 rows. TabPFN-2.5 itself stays frozen.</p>
+<pre><code># tabpfn/architectures/tabpfn_v2_5.py, AddThinkingRows.forward (native)
+# x_BRiCE: (batch, rows, columns, 192) embedded cells
+thinking_rows_BTCE = (
+    self.row_token_values_TE          # (64, 192) learned in pretraining
+    .unsqueeze(0).unsqueeze(2)
+    .expand(batch_size, -1, num_features, -1)   # same rows in every column
+)
+x_BRCE = torch.cat([thinking_rows_BTCE, x_BRiCE], dim=1)
+single_eval_pos += self.num_thinking_rows</code></pre>
+<p>Our adapters keep the same input and output contract. During a forward pass, we put the adapter in place of <code>model.add_thinking_rows</code>. After the pass, we restore the native module.</p>
+
+<h3>3.2 The story</h3>
+<p>The schema text depends only on the number of features. The story adds structural facts. It gives no coefficients, signs, equations or noise levels. For the example scene, the encoder input of the story arm is:</p>
+<div class="example"><span class="lbl">Schema (the control arm reads only this text)</span><code>Columns: x1, x2, x3, x4, x5, x6, x7, x8 and x9 are 9 numeric features, listed in column order. Each row is one record. The target y is a binary outcome with value 0 or 1.</code></div>
+<div class="example"><span class="lbl">Story (the story arm reads schema + newline + story)</span><code>Known structure: x7 directly influences y. x8 is directly influenced by y. x1, x3 and x9 are noisy measurements of one hidden quantity that influences y. x2, x4 and x6 are noisy measurements of a second hidden quantity that influences y. x5 is unrelated to y.</code></div>
+<p>The true roles in this scene: x7 is a parent of y and x8 is a child of y. Group A (x1, x3, x9) and group B (x2, x4, x6) measure two hidden causes. x5 is irrelevant. The longest text over all scenes has 159 MiniLM tokens.</p>
+<p>The corruption tests change the story text. The omitted variant removes the story. The irrelevant variant uses the story of another scene. The wrong variant permutes the roles among the features.</p>
+
+<h3>3.3 Iteration 1 and bge arm: pooled story vector</h3>
+<p>A frozen sentence encoder turns the full text into one vector e. MiniLM (all-MiniLM-L6-v2) gives a mean-pooled, L2-normalized 384-d vector. bge-base-en-v1.5 gives a 768-d CLS vector. A learned matrix P (384 × 768) maps it to 384-d. Each thinking row i gets its own shift W<sub>i</sub>·e. W starts at zero, so the untrained adapter gives exactly the native output.</p>
+<figure><svg viewBox="0 0 760 170" class="chart" role="img" aria-label="Pooled story data flow">
+<text x="10" y="20" class="ctitle">Iteration 1 and bge arm: one vector for the whole text</text>
+<rect x="10" y="40" width="140" height="56" rx="6" class="box2"/><text x="80" y="63" text-anchor="middle" class="leg">schema + story</text><text x="80" y="82" text-anchor="middle" class="tick">one text, ≤ 160 tokens</text>
+<rect x="172" y="40" width="180" height="56" rx="6" class="box2"/><text x="262" y="63" text-anchor="middle" class="leg">frozen encoder</text><text x="262" y="82" text-anchor="middle" class="tick">e ∈ R³⁸⁴ (bge: R⁷⁶⁸ → P → R³⁸⁴)</text>
+<rect x="374" y="40" width="190" height="56" rx="6" class="box3"/><text x="469" y="63" text-anchor="middle" class="leg">shift = W · e</text><text x="469" y="82" text-anchor="middle" class="tick">W: 64 × 192 × 384, starts at 0</text>
+<rect x="586" y="40" width="166" height="56" rx="6" class="think"/><text x="669" y="63" text-anchor="middle" class="leg">rows = θ + shift</text><text x="669" y="82" text-anchor="middle" class="tick">64 × 192, every column</text>
+<line x1="150" y1="68" x2="170" y2="68" class="arrow" marker-end="url(#ah2)"/><line x1="352" y1="68" x2="372" y2="68" class="arrow" marker-end="url(#ah2)"/><line x1="564" y1="68" x2="584" y2="68" class="arrow" marker-end="url(#ah2)"/>
+<text x="10" y="130" class="tick">θ = the 64 checkpoint thinking rows (frozen). Only W (and P for bge) trains. TabPFN-2.5 and the encoder stay frozen.</text>
+<text x="10" y="150" class="tick">Control arm: the same flow with the schema text only.</text>
+<defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahead"/></marker></defs>
+</svg></figure>
+<pre><code># src/texttabpfn/adapter.py, TextConditionedThinkingRows
+self.theta_TE  = checkpoint_rows(model)                 # (64, 192), frozen buffer
+self.weight_TED = nn.Parameter(torch.zeros(64, 192, 384))  # W, starts at 0
+
+def rows(self):                                           # e: (b, 384) text embedding
+    shift_bTE = torch.einsum(&quot;ted,bd-&gt;bte&quot;, self.weight_TED, self._text_bD)
+    return self.theta_TE[None] + shift_bTE                # (b, 64, 192)
+
+def forward(self, x_BRiCE, single_eval_pos):              # same contract as native
+    rows_BTCE = self.rows()[:, :, None].expand(B, -1, C, -1)
+    return torch.cat([rows_BTCE, x_BRiCE], dim=1), single_eval_pos + 64
+
+# use: swap the module in for one forward pass, then restore it
+e = MiniLM.encode(schema + &quot;\n&quot; + story)                 # (384,), mean-pooled, L2-normalized
+with conditioned(model, adapter, e):                      # model.add_thinking_rows = adapter
+    logits = binary_logits(model, x_support, y_support, x_query)</code></pre>
+<p>Trainable parameters: 4,718,592 for MiniLM (W only). bge adds P, for a total of 5,013,504.</p>
+
+<h3>3.4 Iteration 2: per-feature role tokens</h3>
+<p>Each feature gets one short sentence that states only its role. The sentence does not name the feature. The slot position carries the column identity. Features with the same role get the same token.</p>
+<p>The group letters follow the order of the first column in each group. Thus the letter carries no information. For the example scene, the slots are:</p>
+<table><thead><tr><th>Slot</th><th>Column</th><th>Hidden role</th><th>Story arm sentence</th><th>Control arm sentence</th></tr></thead><tbody><tr><td>1</td><td><code>x1</code></td><td>noisy measurement, group A</td><td><code>This feature is a noisy measurement of hidden quantity A, which influences y.</code></td><td><code>This is a numeric feature.</code></td></tr><tr><td>2</td><td><code>x2</code></td><td>noisy measurement, group B</td><td><code>This feature is a noisy measurement of hidden quantity B, which influences y.</code></td><td><code>This is a numeric feature.</code></td></tr><tr><td>3</td><td><code>x3</code></td><td>noisy measurement, group A</td><td><code>This feature is a noisy measurement of hidden quantity A, which influences y.</code></td><td><code>This is a numeric feature.</code></td></tr><tr><td>4</td><td><code>x4</code></td><td>noisy measurement, group B</td><td><code>This feature is a noisy measurement of hidden quantity B, which influences y.</code></td><td><code>This is a numeric feature.</code></td></tr><tr><td>5</td><td><code>x5</code></td><td>irrelevant</td><td><code>This feature is unrelated to y.</code></td><td><code>This is a numeric feature.</code></td></tr><tr><td>6</td><td><code>x6</code></td><td>noisy measurement, group B</td><td><code>This feature is a noisy measurement of hidden quantity B, which influences y.</code></td><td><code>This is a numeric feature.</code></td></tr><tr><td>7</td><td><code>x7</code></td><td>Markov blanket, parent of y</td><td><code>This feature directly influences y.</code></td><td><code>This is a numeric feature.</code></td></tr><tr><td>8</td><td><code>x8</code></td><td>Markov blanket, child of y</td><td><code>This feature is directly influenced by y.</code></td><td><code>This is a numeric feature.</code></td></tr><tr><td>9</td><td><code>x9</code></td><td>noisy measurement, group A</td><td><code>This feature is a noisy measurement of hidden quantity A, which influences y.</code></td><td><code>This is a numeric feature.</code></td></tr><tr><td>10 to 15</td><td>none</td><td>no feature</td><td>zero vector</td><td>zero vector</td></tr></tbody></table>
+<p>MiniLM encodes each sentence on its own. A shared matrix P maps each 384-d token to 25 dimensions. We concatenate the 15 slots into one 375-d vector s. Then each thinking row gets the shift W<sub>i</sub>·s.</p>
+<figure><svg viewBox="0 0 760 250" class="chart" role="img" aria-label="Role token data flow">
+<text x="10" y="20" class="ctitle">Iteration 2: one token per feature slot</text>
+<g class="tick">
+<rect x="10" y="38" width="190" height="24" rx="4" class="box2"/><text x="18" y="54">slot 1: “…measurement of A…”</text>
+<rect x="10" y="66" width="190" height="24" rx="4" class="box2"/><text x="18" y="82">slot 2: “…measurement of B…”</text>
+<text x="18" y="106">…</text>
+<rect x="10" y="114" width="190" height="24" rx="4" class="box2"/><text x="18" y="130">slot 9: “…measurement of A…”</text>
+<rect x="10" y="142" width="190" height="24" rx="4" class="box2"/><text x="18" y="158">slots 10 to 15: zero</text>
+</g>
+<rect x="230" y="70" width="130" height="64" rx="6" class="box2"/><text x="295" y="94" text-anchor="middle" class="leg">MiniLM per slot</text><text x="295" y="114" text-anchor="middle" class="tick">t_j ∈ R³⁸⁴</text>
+<rect x="385" y="70" width="120" height="64" rx="6" class="box3"/><text x="445" y="94" text-anchor="middle" class="leg">P · t_j</text><text x="445" y="114" text-anchor="middle" class="tick">shared 384 → 25</text>
+<rect x="530" y="70" width="100" height="64" rx="6" class="box3"/><text x="580" y="94" text-anchor="middle" class="leg">concat</text><text x="580" y="114" text-anchor="middle" class="tick">s ∈ R³⁷⁵</text>
+<rect x="650" y="70" width="100" height="64" rx="6" class="think"/><text x="700" y="94" text-anchor="middle" class="leg">θ + W · s</text><text x="700" y="114" text-anchor="middle" class="tick">W: 64×192×375</text>
+<line x1="200" y1="102" x2="228" y2="102" class="arrow" marker-end="url(#ah3)"/><line x1="360" y1="102" x2="383" y2="102" class="arrow" marker-end="url(#ah3)"/><line x1="505" y1="102" x2="528" y2="102" class="arrow" marker-end="url(#ah3)"/><line x1="630" y1="102" x2="648" y2="102" class="arrow" marker-end="url(#ah3)"/>
+<text x="10" y="200" class="tick">The slot index carries the column identity. The sentence carries the role. P has no bias, so empty slots stay zero.</text>
+<text x="10" y="220" class="tick">The concat keeps the slots apart. A mean over slots would mix the roles again, as the pooled story did.</text>
+<text x="10" y="240" class="tick">Trainable: W (4,608,000) + P (9,600) = 4,617,600 parameters.</text>
+<defs><marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahead"/></marker></defs>
+</svg></figure>
+<pre><code># src/texttabpfn/role_tokens.py, RoleTokenThinkingRows
+sentences = role_sentences(scene.describe()[&quot;roles&quot;])   # 9 strings, column order
+tokens = slot_tokens(MiniLM, sentences)                   # (15, 384), rows 10..15 = 0
+
+self.projection_PD = nn.Parameter(seeded_init(25, 384))   # P, same start in both arms
+self.weight_TES = nn.Parameter(torch.zeros(64, 192, 15 * 25))  # W, starts at 0
+
+def summary(self):                                        # s = concat_j(P t_j): (b, 375)
+    return torch.einsum(&quot;pd,bsd-&gt;bsp&quot;, self.projection_PD, self._text_bD).flatten(1)
+
+def rows(self):
+    shift_bTE = torch.einsum(&quot;tes,bs-&gt;bte&quot;, self.weight_TES, self.summary())
+    return self.theta_TE[None] + shift_bTE                # forward() as in iteration 1</code></pre>
+<p>The roles come from an exact parse of the template story (<code>Scene.describe()</code>). This test shows if TabPFN can use clean structure. It does not test free-text understanding.</p>
+
+<h3>3.5 Story-guided preprocessing (no training)</h3>
+<p>This baseline uses the same roles to edit the table before native TabPFN reads it:</p>
+<ol class="steps">
+<li>Remove each feature that the story calls unrelated. In the example, remove x5.</li>
+<li>Keep each Markov-blanket feature. In the example, keep x7 and x8.</li>
+<li>For each measurement group, standardize its columns and replace them with the first principal component. Align the sign to the first column of the group. In the example, A (x1, x3, x9) becomes one column and B (x2, x4, x6) becomes one column.</li>
+</ol>
+<p>The example table goes from 9 columns to 4. The PCA uses no labels. The main variant fits on support and query features. A second variant fits on support features only.</p>
+
+<h3>3.6 Training</h3>
+<p>Both arms train in lockstep on the same stream of synthetic episodes. Each episode draws one training scene, a support size n, the support rows and 512 query rows. The loss is the mean cross-entropy on the query rows. Only W (and P) get gradients.</p>
+<pre><code># src/texttabpfn/training.py (role_training.py and followon.py use the same loop)
+for step in range(4000):
+    for k in range(8):                                    # 8 episodes per step
+        ep = make_episode(settings, index)                # same episode for both arms
+        # ep: one training scene (families 0 to 3), n ~ log-uniform(8, 1024),
+        #     stratified support rows, 512 separate query rows, texts per arm
+        for arm in (&quot;story&quot;, &quot;control&quot;):
+            logits = episode_logits(model, adapters[arm], text_input[arm], ep)
+            loss = F.cross_entropy(logits.reshape(-1, 2), y_query.reshape(-1))
+            (loss / 8).backward()                         # gradient reaches W (and P) only
+    adam_step(lr=1e-3, warmup=100, cosine_to=0.1 * lr)
+    if step % 250 == 0:
+        dev_loss(64 dev scenes, n in (8, 32, 128))        # keep the best checkpoint</code></pre>
+<p>In iteration 1 and the bge arm, the story arm sees a mix of texts: 75% correct story, 15% no story, 10% one wrong fact. The role-token story arm always gets the correct roles. Each run selects its checkpoint by dev loss only. The dev scenes come from families 0 to 3.</p>
+<table class="num"><thead><tr><th>Run</th><th>Steps × episodes</th><th>Train time (MPS)</th><th>Story arm: step / dev loss</th><th>Control arm: step / dev loss</th><th>Native dev loss</th></tr></thead><tbody><tr><td>Iteration 1, MiniLM</td><td>4000 × 8</td><td>3.65 h</td><td>3250 / 0.4387</td><td>3250 / 0.4376</td><td>0.4464</td></tr><tr><td>Role tokens</td><td>4000 × 8</td><td>2.92 h</td><td>4000 / 0.4335</td><td>3750 / 0.4381</td><td>0.4464</td></tr><tr><td>Role tokens, 10k (owner request)</td><td>10000 × 8</td><td>7.50 h</td><td>9500 / 0.4334</td><td>6500 / 0.4364</td><td>0.4464</td></tr><tr><td>bge arm</td><td>4000 × 8</td><td>3.01 h</td><td>3000 / 0.4377</td><td>3000 / 0.4377</td><td>0.4464</td></tr></tbody></table>
+
+<h2>4. Results overview</h2>
+<table class="num"><thead><tr><th>Arm</th><th>What the adapter reads</th><th>n = 8</th><th>n = 16</th><th>n = 32</th><th>D-08 verdict</th></tr></thead><tbody><tr><td>Iteration 1</td><td>whole text as one MiniLM vector</td><td>−0.0008 [−0.0019, +0.0003]</td><td>+0.0001 [−0.0008, +0.0010]</td><td>+0.0012 [+0.0005, +0.0019]</td><td><span class="pill bad">harmful</span></td></tr><tr><td>Role tokens, 4000 steps</td><td>one MiniLM token per feature</td><td>−0.0042 [−0.0064, −0.0020]</td><td>−0.0042 [−0.0057, −0.0027]</td><td>−0.0041 [−0.0052, −0.0030]</td><td><span class="pill ok">supported</span></td></tr><tr><td>Role tokens, 10k steps</td><td>the same, with 2.5 times more training</td><td>−0.0098 [−0.0121, −0.0075]</td><td>−0.0080 [−0.0097, −0.0064]</td><td>−0.0057 [−0.0071, −0.0044]</td><td><span class="pill ok">supported</span></td></tr><tr><td>bge arm</td><td>whole text as one bge-base vector</td><td>+0.0008 [+0.0000, +0.0017]</td><td>+0.0004 [−0.0001, +0.0010]</td><td>+0.0001 [−0.0004, +0.0005]</td><td><span class="pill warn">harmful (marginal)</span></td></tr></tbody></table>
+<p class="note">Each cell shows story arm minus control arm, in nats, with the 95% CI. A negative value means that the story helps.</p>
 <figure><svg viewBox="0 0 760 360" role="img" aria-label="Story arm minus matched control: paired log-loss difference (95% CI band)" class="chart">
 <text x="84" y="22" class="ctitle">Story arm minus matched control: paired log-loss difference (95% CI band)</text>
 <line x1="84" x2="530" y1="310.0" y2="310.0" class="grid"/>
@@ -199,26 +302,25 @@ footer{margin-top:56px;color:var(--muted);font-size:.85rem;border-top:1px solid 
 <line x1="546" x2="566" y1="139" y2="139" stroke="var(--c-bge)" stroke-width="3"/>
 <text x="572" y="143" class="leg">Pooled bge-base story −</text>
 <text x="572" y="158" class="leg">schema</text>
-</svg><figcaption>Across all support sizes. Pooled-story arms (grey, red) hover around zero; role-token arms (greens) are below zero at small n and converge to zero as labels accumulate — the pattern hypothesis H3 predicts.</figcaption></figure>
+</svg><figcaption>All support sizes. The pooled arms (gray, red) stay near zero. The role-token arms (greens) are below zero at small n and move toward zero as n grows. Hypothesis H3 predicts this pattern.</figcaption></figure>
 
-<h2>4. Iteration 1 — one pooled story embedding</h2>
-<h3>Is the channel big enough? (stage 1)</h3>
-<p>Before involving text, the 64 thinking rows were optimized <em>per scene, with label access</em> on 50 dev scenes. This is a diagnostic upper limit, not a method.</p>
-<table class="num"><thead><tr><th>n</th><th>native</th><th>shared rows optimized</th><th>shared gain [95% CI]</th><th>per-column optimized</th><th>per-column gain [95% CI]</th></tr></thead><tbody><tr><td>8</td><td>0.5517</td><td>0.3902</td><td>0.1616 [0.1455, 0.1759]</td><td>0.3513</td><td>0.2004 [0.1842, 0.2160]</td></tr><tr><td>16</td><td>0.4829</td><td>0.3593</td><td>0.1235 [0.1075, 0.1397]</td><td>0.3292</td><td>0.1537 [0.1366, 0.1696]</td></tr><tr><td>32</td><td>0.4185</td><td>0.3436</td><td>0.0749 [0.0641, 0.0859]</td><td>0.3185</td><td>0.1001 [0.0877, 0.1126]</td></tr></tbody></table>
-<p>The channel is large: a perfect text-to-rows mapping could cut log loss by 0.16 nats at n = 8. Per-column rows add only ~25–35% more, so the shared design was kept.</p>
-<h3>Training and held-out result (stages 2–5)</h3>
-<p>Frozen all-MiniLM-L6-v2 embedded schema + story; adapters trained for 32,000 episodes each. Both adapters beat native TabPFN by up to 0.012 nats at n = 16 — but <strong>the schema-only adapter got the same gain</strong>. On held-out families story − schema was −0.0008 / +0.0001 / +0.0012 at n = 8 / 16 / 32, verdict “harmful” by about 0.001 nats.</p>
-<p>Corrupting the story told the same tale: removing it cost +0.0015 at n = 8, but swapping in another scene's story or permuting roles changed nothing measurable. The adapter noticed whether a story was present, not what it said. A diagnostic explained why: MiniLM embeddings of different stories had cosine similarity 0.989 among scenes with the same number of features — the role information was a tiny residual of the pooled vector.</p>
+<h2>5. Iteration 1: one pooled story vector</h2>
+<h3>Size of the channel (stage 1)</h3>
+<p>Before we used text, we optimized the 64 thinking rows per scene with access to the labels. We used 50 dev scenes. This diagnostic gives an upper limit. It is not a method.</p>
+<table class="num"><thead><tr><th>n</th><th>native</th><th>shared rows, optimized</th><th>shared gain [95% CI]</th><th>per-column rows, optimized</th><th>per-column gain [95% CI]</th></tr></thead><tbody><tr><td>8</td><td>0.5517</td><td>0.3902</td><td>0.1616 [0.1455, 0.1759]</td><td>0.3513</td><td>0.2004 [0.1842, 0.2160]</td></tr><tr><td>16</td><td>0.4829</td><td>0.3593</td><td>0.1235 [0.1075, 0.1397]</td><td>0.3292</td><td>0.1537 [0.1366, 0.1696]</td></tr><tr><td>32</td><td>0.4185</td><td>0.3436</td><td>0.0749 [0.0641, 0.0859]</td><td>0.3185</td><td>0.1001 [0.0877, 0.1126]</td></tr></tbody></table>
+<p>The channel is large. A perfect map from text to rows could lower the log loss by 0.16 nats at n = 8. Per-column rows add only 25 to 35%, so we kept shared rows.</p>
+<h3>Held-out result (stages 2 to 5)</h3>
+<p>Both adapters beat native TabPFN by up to 0.012 nats at n = 16. The control arm got the same gain. On held-out families, story minus control was −0.0008, +0.0001 and +0.0012 at n = 8, 16 and 32. The verdict was “harmful”, by about 0.001 nats.</p>
+<p>The corruption tests agree. A missing story cost +0.0015 at n = 8. The story of another scene and permuted roles had no measurable effect. So the adapter detected if a story was present, but it did not use the content.</p>
+<p>A diagnostic shows the cause. Stories with the same number of features had a MiniLM cosine of 0.989. The role information was only a small part of the vector.</p>
 
-<h2>5. Iteration 2 — exposing per-feature roles</h2>
-<h3>How much are the roles worth at all? (stage 7)</h3>
-<p>No training: native TabPFN on rows preprocessed using only the story's roles — drop features called unrelated, collapse each measurement group into its first principal component (fitted without labels).</p>
+<h2>6. Iteration 2: per-feature roles</h2>
+<h3>Value of the roles (stage 7)</h3>
+<p>This test uses no training. Native TabPFN reads the table after story-guided preprocessing (section 3.5).</p>
 <table class="num"><thead><tr><th>n</th><th>native</th><th>preprocessed</th><th>preprocessed − native [95% CI]</th><th>support-only fit − native</th></tr></thead><tbody><tr><td>8</td><td>0.6292</td><td>0.6128</td><td>−0.0165 [−0.0200, −0.0130]</td><td>−0.0153 [−0.0190, −0.0115]</td></tr><tr><td>16</td><td>0.5879</td><td>0.5675</td><td>−0.0204 [−0.0233, −0.0171]</td><td>−0.0197 [−0.0227, −0.0163]</td></tr><tr><td>32</td><td>0.5353</td><td>0.5197</td><td>−0.0156 [−0.0183, −0.0129]</td><td>−0.0151 [−0.0177, −0.0125]</td></tr><tr><td>256</td><td>0.4144</td><td>0.4202</td><td>+0.0058 [+0.0029, +0.0091]</td><td>+0.0058 [+0.0031, +0.0086]</td></tr><tr><td>1024</td><td>0.3806</td><td>0.3938</td><td>+0.0132 [+0.0103, +0.0167]</td><td>+0.0132 [+0.0103, +0.0166]</td></tr></tbody></table>
-<p>Roles are worth 0.016–0.020 nats at small n, so the experiment continued (stop rule D-13 did not fire). Fitting only on support rows keeps almost all of the gain, so it is not driven by the unlabeled query rows. At large n, discarding information hurts.</p>
-<h3>Per-feature role tokens (stages 8, 9, 13)</h3>
-<p>Each feature x<sub>j</sub> gets its own token in slot j: the MiniLM embedding of one sentence stating only its role — “This feature directly influences y.”, “This feature is unrelated to y.”, “This feature is a noisy measurement of hidden quantity A, which influences y.” The sentence never names the feature; the slot position carries identity. A shared projection reduces the 15 slots into the same θᵢ + Wᵢ·s shift. The control puts the neutral sentence “This is a numeric feature.” in every slot.</p>
-<table class="num"><thead><tr><th>Run</th><th>Steps × episodes</th><th>Train time (MPS)</th><th>Story: step / dev loss</th><th>Control: step / dev loss</th><th>Native dev loss</th></tr></thead><tbody><tr><td>It. 1 MiniLM story vs schema</td><td>4000 × 8</td><td>3.65 h</td><td>3250 / 0.4387</td><td>3250 / 0.4376</td><td>0.4464</td></tr><tr><td>Role tokens</td><td>4000 × 8</td><td>2.92 h</td><td>4000 / 0.4335</td><td>3750 / 0.4381</td><td>0.4464</td></tr><tr><td>Role tokens (owner request)</td><td>10000 × 8</td><td>7.50 h</td><td>9500 / 0.4334</td><td>6500 / 0.4364</td><td>0.4464</td></tr><tr><td>bge-base pooled story</td><td>4000 × 8</td><td>3.01 h</td><td>3000 / 0.4377</td><td>3000 / 0.4377</td><td>0.4464</td></tr></tbody></table>
-<p>On held-out families the role-token story arm beats its control at every n = 8 … 256 (4000 steps) and every n = 8 … 1024 (10k steps), in each held-out family separately.</p>
+<p>The roles give 0.016 to 0.020 nats at small n. Thus stop rule D-13 did not fire, and the run continued. The support-only fit keeps almost all of the gain. Thus the unlabeled query rows do not cause the gain. At large n, the removed information makes the predictions worse.</p>
+<h3>Role tokens (stages 8, 9 and 13)</h3>
+<p>On held-out families, the role-token story arm beats its control at all n from 8 to 256 (4000 steps). At 10k steps, it beats its control at all n from 8 to 1024. Both held-out families show this result separately.</p>
 <figure><svg viewBox="0 0 760 300" role="img" aria-label="Reliability" class="chart">
 <text x="70" y="22" class="ctitle">4000-step role-token adapter: corrupted − correct roles (95% CI)</text>
 <line x1="70" x2="610" y1="260.0" y2="260.0" class="grid"/><text x="62" y="264.0" class="tick" text-anchor="end">+0.000</text>
@@ -252,16 +354,16 @@ footer{margin-top:56px;color:var(--muted);font-size:.85rem;border-top:1px solid 
 <rect x="628" y="41" width="14" height="12" fill="var(--c-it1)" rx="2"/><text x="648" y="52" class="leg">omitted</text>
 <rect x="628" y="63" width="14" height="12" fill="var(--c-bge)" rx="2"/><text x="648" y="74" class="leg">irrelevant</text>
 <rect x="628" y="85" width="14" height="12" fill="var(--c-pre)" rx="2"/><text x="648" y="96" class="leg">wrong</text>
-</svg><figcaption>Every corruption makes the adapter worse — it reads the roles. Corruptions change only part of the slots (irrelevant 79%, wrong 67% on average), so these are partial corruptions; differences between types are not significant at every n.</figcaption></figure>
-<h3>Why the 10k gap is wider</h3>
+</svg><figcaption>Each corruption makes the 4000-step adapter worse, so the adapter reads the roles. The corruptions change only part of the slots (irrelevant: 79%, wrong: 67% on average). The differences between corruption types are not significant at all n.</figcaption></figure>
+<h3>Why the 10k gap is larger</h3>
 <table class="num"><thead><tr><th>n</th><th>story 10k − story 4k</th><th>control 10k − control 4k</th></tr></thead><tbody><tr><td>8</td><td>−0.0027 [−0.0042, −0.0012]</td><td>+0.0029 [+0.0013, +0.0044]</td></tr><tr><td>16</td><td>−0.0029 [−0.0037, −0.0019]</td><td>+0.0009 [−0.0002, +0.0021]</td></tr><tr><td>32</td><td>−0.0015 [−0.0024, −0.0006]</td><td>+0.0001 [−0.0007, +0.0009]</td></tr></tbody></table>
-<p class="note">At n = 8 about half the widening is the story arm improving and half the control getting worse; the 10k control (0.6283) sits close to native (0.6292). This was an owner-requested retrain; its verdict decided which follow-on arm ran next.</p>
+<p class="note">At n = 8, half of the change came from a better story arm. The other half came from a worse control arm. The 10k control arm (0.6283) is close to native (0.6292). The owner asked for this run. Its verdict chose the next arm.</p>
+<h3>bge arm (stages 10 and 11)</h3>
+<p>Role tokens got the verdict “supported”. Thus rule D-14 chose the larger-encoder test. This test is the iteration 1 design with frozen bge-base-en-v1.5. The two arms had the same dev loss (0.4377).</p>
+<p>On held-out families, story minus control was +0.0008 [+0.0000, +0.0017] at n = 8. The rule gives “harmful”. But only 69 of 100 bootstrap seeds give this verdict, and the paired t-test gives p = 0.051. In practice, the effect is zero.</p>
+<p>The bge stories are even more alike than the MiniLM stories (cosine 0.9936 against 0.9886).</p>
 
-
-<h3>Follow-on: a stronger pooled encoder (stages 10–11)</h3>
-<p>Because role tokens were “supported”, the pre-registered rule picked the stronger-encoder test: iteration 1's pooled design with frozen bge-base-en-v1.5 (768-d, 5.0M trainable parameters). Dev losses tied exactly (0.4377 vs 0.4377). Held-out: +0.0008 [+0.0000, +0.0017] at n = 8 — the rule prints “harmful”, but the call holds in only 69 of 100 bootstrap seeds (paired t-test p = 0.051). Effectively a null. bge's pooled stories are even more alike than MiniLM's (same-feature-count cosine 0.9936 vs 0.9886).</p>
-
-<h2>6. Against native TabPFN and the preprocessing baseline</h2>
+<h2>7. Comparison with native TabPFN and preprocessing</h2>
 <figure><svg viewBox="0 0 760 320" role="img" aria-label="Log-loss reduction vs native at n = 8 (nats)" class="chart">
 <text x="20" y="22" class="ctitle">Log-loss reduction vs native at n = 8 (nats)</text>
 <text x="240" y="62.6" class="leg" text-anchor="end">Shared rows, optimized (ceiling)</text>
@@ -285,7 +387,7 @@ footer{margin-top:56px;color:var(--muted);font-size:.85rem;border-top:1px solid 
 <text x="240" y="285.4" class="leg" text-anchor="end">Pooled bge story</text>
 <rect x="250" y="266.9" width="7.9" height="29.1" rx="3" fill="var(--c-bge)"><title>Pooled bge story: 0.0036 nats</title></rect>
 <text x="263.9" y="285.4" class="tick">0.0036</text>
-</svg><figcaption>Gain over native at n = 8. The two purple bars are label-optimized upper limits, not methods, and were measured on 50 dev scenes (families 0–3, native 0.5517); the other bars are on the 200 held-out scenes (native 0.6292), so compare them to the ceiling only by order of magnitude. On the same held-out rows, the best learned adapter (10k role tokens) recovers about two-thirds of the preprocessing gain.</figcaption></figure>
+</svg><figcaption>Gain over native at n = 8. The two purple bars are upper limits with label access, not methods. They come from 50 dev scenes (families 0 to 3, native 0.5517). The other bars come from the 200 held-out scenes (native 0.6292). Compare the two sets only by order of magnitude. On the same held-out rows, the 10k role-token arm gets about two thirds of the preprocessing gain.</figcaption></figure>
 <figure><svg viewBox="0 0 760 360" role="img" aria-label="Each method minus native TabPFN-2.5 (mean query log loss, same rows)" class="chart">
 <text x="84" y="22" class="ctitle">Each method minus native TabPFN-2.5 (mean query log loss, same rows)</text>
 <line x1="84" x2="530" y1="310.0" y2="310.0" class="grid"/>
@@ -372,40 +474,41 @@ footer{margin-top:56px;color:var(--muted);font-size:.85rem;border-top:1px solid 
 <circle cx="530.0" cy="136.5" r="3.2" fill="var(--c-bge)"><title>bge story, n=1024: +0.0007</title></circle>
 <line x1="546" x2="566" y1="150" y2="150" stroke="var(--c-bge)" stroke-width="3"/>
 <text x="572" y="154" class="leg">bge story</text>
-</svg><figcaption>Mean log loss minus native on identical rows (no CIs drawn; see tables). Part of every adapter's gain is generic retuning of the thinking rows that the controls also get; preprocessing (dashed) wins at small n but costs up to +0.013 nats at n = 1024.</figcaption></figure>
+</svg><figcaption>Mean log loss minus native on the same rows. The chart shows no CIs. The tables give them. The control arms get part of each adapter gain, so that part comes from generic tuning of the thinking rows. Preprocessing (dashed) wins at small n. At n = 1024 it costs +0.013 nats.</figcaption></figure>
 
-<h2>7. What this shows — and what it doesn't</h2>
+<h2>8. Conclusions and limits</h2>
 <div class="two">
-<div class="card"><strong>Shows</strong>
+<div class="card"><strong>What the data shows</strong>
 <ul>
-<li>A frozen TabPFN-2.5 can use story-provided structure through its thinking rows when that structure is exposed per feature.</li>
-<li>Pooling the whole story into one sentence embedding loses the information — with a small or a stronger encoder.</li>
-<li>The benefit is largest at few labels and fades as labels accumulate.</li>
-<li>Wrong or irrelevant structure hurts the role-token adapter.</li>
+<li>A frozen TabPFN-2.5 can use story structure through its thinking rows when each feature gets its own role token.</li>
+<li>One pooled sentence vector loses the role information. This result holds for a small encoder and for a larger one.</li>
+<li>The benefit is largest with few labels. It gets smaller as the number of labels grows.</li>
+<li>Wrong or irrelevant roles make the role-token adapter worse.</li>
 </ul></div>
-<div class="card"><strong>Does not show</strong>
+<div class="card"><strong>What the data does not show</strong>
 <ul>
-<li>Understanding of free-form text: roles were parsed exactly from templates.</li>
-<li>Robustness to training seeds: each arm was trained once; the bootstrap covers scenes, not training runs. Only the 4000-step role result is confirmed within one adapter.</li>
-<li>Results inside TabPFN's ensembled sklearn wrapper, on real datasets, or label savings (H2).</li>
-<li>Corruption robustness for the 10k and bge arms.</li>
+<li>Free-text understanding. The roles come from an exact parse of template stories.</li>
+<li>Robustness to the training seed. We trained each arm once. The bootstrap covers scenes, not training runs. A same-adapter check confirms only the 4000-step role-token result.</li>
+<li>Results in the ensembled TabPFN sklearn wrapper or on real datasets. We did not measure label savings (H2).</li>
+<li>Corruption results for the 10k arms and the bge arm.</li>
 </ul></div>
 </div>
-<h3>Suggested next steps</h3>
+<h3>Next steps</h3>
 <ol>
-<li>Train each arm with 2–3 seeds so verdicts include run-to-run variance.</li>
-<li>Extract per-feature roles from free-form or paraphrased stories with a local LLM and feed them as role tokens.</li>
-<li>Per-column thinking rows that bind each column's role token directly.</li>
+<li>Train each arm with 2 or 3 seeds. Then the verdicts include training-run variance.</li>
+<li>Use a local LLM to get the roles from free or paraphrased stories. Feed the roles as role tokens.</li>
+<li>Test per-column thinking rows that bind each column to its own role token.</li>
 </ol>
 
-<h2>8. Run log</h2>
-<table class=""><thead><tr><th>Stage</th><th>What</th><th>Key outcome</th></tr></thead><tbody><tr><td>1</td><td>Channel capacity: optimize thinking rows per scene with labels (diagnostic)</td><td>Ceiling 0.16 nats at n = 8; stop rule not fired</td></tr><tr><td>2</td><td>Template stories, MiniLM encoder, zero-init adapter</td><td>Parity with native at init (15 parity tests pass); longest text 159 of 256 tokens</td></tr><tr><td>3</td><td>Train pooled-story and schema-only adapters, 32k episodes each</td><td>Dev: story 0.4387 ≈ schema 0.4376</td></tr><tr><td>4</td><td>Held-out evaluation, 200 scenes, n = 8…1024</td><td>Story − schema +0.0012 at n = 32: “harmful”, ~1e-3 nats</td></tr><tr><td>5</td><td>Corrupted stories</td><td>Absence of a story is noticed; its content is not</td></tr><tr><td>6</td><td>Iteration-1 results note</td><td>Verdict recorded</td></tr><tr><td>7</td><td>Story-guided preprocessing on native TabPFN</td><td>Roles worth 0.016–0.020 nats at n ≤ 32</td></tr><tr><td>8</td><td>Per-feature role tokens + matched neutral control</td><td>Dev: story 0.4335 vs control 0.4381</td></tr><tr><td>9</td><td>Held-out evaluation of role tokens + corruptions</td><td>−0.0042 at n = 8–32: “supported”; all corruptions hurt</td></tr><tr><td>13</td><td>Owner request: retrain role tokens for 10k steps</td><td>−0.0098 / −0.0080 / −0.0057: “supported”</td></tr><tr><td>10</td><td>Follow-on chosen by rule: bge-base pooled story</td><td>Dev tie 0.4377 = 0.4377</td></tr><tr><td>11</td><td>Held-out evaluation of bge arm</td><td>+0.0008 at n = 8: “harmful”, marginal (69/100 seeds)</td></tr><tr><td>12</td><td>Iteration-2 results note + final review</td><td>No P0–P2 findings</td></tr></tbody></table>
+<h2>9. Run log</h2>
+<table class=""><thead><tr><th>Stage</th><th>Work</th><th>Result</th></tr></thead><tbody><tr><td>1</td><td>Optimize the thinking rows per scene with labels (diagnostic only)</td><td>Upper limit 0.16 nats at n = 8. The stop rule did not fire.</td></tr><tr><td>2</td><td>Write template stories. Build the zero-start adapter.</td><td>At the start, the adapter gives the native output. Parity tests pass (15). The longest text has 159 of 256 tokens.</td></tr><tr><td>3</td><td>Train the story arm and the control arm, 32,000 episodes each</td><td>Dev loss: story 0.4387, control 0.4376</td></tr><tr><td>4</td><td>Score both arms on 200 held-out scenes, n = 8 to 1024</td><td>+0.0012 at n = 32. Verdict: harmful, about 0.001 nats.</td></tr><tr><td>5</td><td>Score corrupted stories</td><td>The adapter detects a missing story. It ignores the story content.</td></tr><tr><td>6</td><td>Write the iteration 1 results note</td><td>The note records the verdict.</td></tr><tr><td>7</td><td>Preprocess native TabPFN inputs with the story roles</td><td>The roles give 0.016 to 0.020 nats at n ≤ 32.</td></tr><tr><td>8</td><td>Build and train the role-token arms</td><td>Dev loss: story 0.4335, control 0.4381</td></tr><tr><td>9</td><td>Score the role-token arms and the corruptions</td><td>−0.0042 at n = 8 to 32. Verdict: supported. Every corruption hurts.</td></tr><tr><td>13</td><td>Train the role-token arms again for 10k steps (owner request)</td><td>−0.0098, −0.0080, −0.0057. Verdict: supported.</td></tr><tr><td>10</td><td>Train the bge arm (rule D-14 chose it)</td><td>Dev loss: 0.4377 for both arms</td></tr><tr><td>11</td><td>Score the bge arm</td><td>+0.0008 at n = 8. Verdict: harmful, but marginal (69 of 100 seeds).</td></tr><tr><td>12</td><td>Write the iteration 2 results note. Do the final review.</td><td>The review found no P0 to P2 problems.</td></tr></tbody></table>
 
-<h2>9. Reproducibility</h2>
+<h2>10. Reproducibility</h2>
 <ul>
-<li>All numbers in this page are printed by <code>uv run python -m texttabpfn.report &lt;name&gt;</code> with names <code>capacity</code>, <code>training</code>, <code>primary</code>, <code>curve</code>, <code>reliability</code>, <code>roleinfo</code>, <code>role-training</code>, <code>role-primary</code>, <code>role-curve</code>, <code>role-reliability</code>, <code>role10k-primary</code>, <code>followon-training</code>, <code>followon-primary</code>; exceptions (bootstrap-seed stability, slot-change rates, encoder cosines) come from the review reports in the plan directory.</li>
-<li>Code: <code>src/texttabpfn/</code>; tests: <code>tests_exp/</code> (207 passing); small results: <code>results/</code>. Model and adapter weights stay local (TabPFN-2.5 non-commercial license).</li>
-<li>Detailed write-ups: <code>docs/research/web/2026-11-11-text-conditioned-thinking-rows-results.md</code> and <code>docs/research/web/2026-11-12-per-feature-role-tokens-results.md</code>; plan, decisions and reviews: <code>docs/plans/text-conditioned-thinking-rows/</code>.</li>
+<li>The report commands print all numbers on this page: <code>uv run python -m texttabpfn.report NAME</code>. NAME is one of <code>capacity</code>, <code>training</code>, <code>primary</code>, <code>curve</code>, <code>reliability</code>, <code>roleinfo</code>, <code>role-training</code>, <code>role-primary</code>, <code>role-curve</code>, <code>role-reliability</code>, <code>role10k-primary</code>, <code>followon-training</code> or <code>followon-primary</code>.</li>
+<li>Three groups of numbers come from the review reports in the plan directory: bootstrap-seed stability, slot-change rates and encoder cosines.</li>
+<li>Code: <code>src/texttabpfn/</code>. Tests: <code>tests_exp/</code> (207 pass). Small results: <code>results/</code>. Model weights and adapter weights stay local because of the TabPFN-2.5 non-commercial license.</li>
+<li>Details: <code>docs/research/web/2026-11-11-text-conditioned-thinking-rows-results.md</code> and <code>docs/research/web/2026-11-12-per-feature-role-tokens-results.md</code>. Plan, decisions and reviews: <code>docs/plans/text-conditioned-thinking-rows/</code>.</li>
 </ul>
-<footer>Generated 2026-11-12 from committed experiment results. Self-contained: no scripts, fonts or external assets.</footer>
+<footer>Generated on 2026-11-12 from committed results. The file has no scripts, fonts or external assets.</footer>
 </main></body></html>
